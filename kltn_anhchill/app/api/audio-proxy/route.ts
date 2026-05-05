@@ -31,7 +31,7 @@ export async function GET(req: Request) {
         }
 
         await dbConnect();
-        const video = await Video.findById(videoId).select("videoUrl title").lean();
+        const video = await Video.findById(videoId).select("videoUrl title").lean() as any;
 
         if (!video) {
             return NextResponse.json({ error: "Không tìm thấy video" }, { status: 404 });
