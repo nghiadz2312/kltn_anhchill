@@ -89,12 +89,16 @@ export async function proxy(request: NextRequest) {
 }
 
 /**
- * config.matcher: Proxy chỉ chạy trên các route này.
- * Không chạy trên: _next/static, _next/image, favicon.ico, file trong public/
- * → Tránh lãng phí tài nguyên chạy proxy cho file tĩnh.
+ * config.matcher: Proxy chỉ chạy trên các route cần kiểm tra quyền.
+ * Các trang công khai như trang chủ (/) sẽ KHÔNG đi qua proxy.
  */
 export const config = {
     matcher: [
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        "/profile/:path*",
+        "/my-courses/:path*",
+        "/admin/:path*",
+        "/api/admin/:path*",
+        "/login",
+        "/register",
     ],
 };

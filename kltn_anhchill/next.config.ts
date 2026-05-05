@@ -6,10 +6,10 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '100mb'
     },
     // 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
-    // Cấu hình này cho phép Middleware chấp nhận các request có dung lượng lớn (100MB).
-    // Nếu không có dòng này, Middleware sẽ chặn mọi file > 10MB để bảo vệ Server,
+    // Cấu hình này cho phép Proxy chấp nhận các request có dung lượng lớn (100MB).
+    // Nếu không có dòng này, Proxy sẽ chặn mọi file > 10MB để bảo vệ Server,
     // dẫn đến lỗi "Request body exceeded 10MB".
-    middlewareClientMaxBodySize: '100mb',
+    proxyClientMaxBodySize: '100mb',
   },
 };
 
