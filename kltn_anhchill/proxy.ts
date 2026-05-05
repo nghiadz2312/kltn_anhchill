@@ -4,26 +4,26 @@ import { jwtVerify } from "jose";
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
  * 
- * Middleware là gì?
- * → Middleware là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler.
- *   Mọi request đến server đều đi qua middleware trước.
+ * Proxy (tên mới của Middleware trong Next.js 16) là gì?
+ * → Proxy là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler.
+ *   Mọi request đến server đều đi qua proxy trước.
  * 
- * Tại sao cần Middleware thay vì kiểm tra trong từng page?
+ * Tại sao cần Proxy thay vì kiểm tra trong từng page?
  * → Nếu kiểm tra trong từng page, lỡ quên 1 page là có lỗ hổng bảo mật.
- *   Middleware tập trung logic bảo vệ ở 1 nơi → không bỏ sót.
+ *   Proxy tập trung logic bảo vệ ở 1 nơi → không bỏ sót.
  *   Đây là nguyên tắc DRY (Don't Repeat Yourself) trong lập trình.
  * 
  * Luồng hoạt động:
- * User truy cập /admin → Middleware bắt request → Kiểm tra JWT cookie
+ * User truy cập /admin → Proxy bắt request → Kiểm tra JWT cookie
  * → Có token hợp lệ + role=admin → Cho qua
  * → Không có token hoặc role=student → Redirect về /login
  */
 
-const JWT_SECRET = new TextEncoder().encode(
-    process.env.JWT_SECRET || "engchill-secret-key-change-in-production"
-);
+export async function proxy(request: NextRequest) {
+    const JWT_SECRET = new TextEncoder().encode(
+        process.env.JWT_SECRET || "engchill-secret-key-change-in-production"
+    );
 
-export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get("engchill-token")?.value;
 
@@ -38,31 +38,40 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith("/api/admin");
 
     // ─── TRƯỜNG HỢP 3: Route chỉ dành cho người CHƯA đăng nhập ───
+    // (Đã đăng nhập rồi thì không cần vào trang login/register nữa)
     const isAuthRoute = pathname.startsWith("/login") ||
         pathname.startsWith("/register");
 
     // Không có token
     if (!token) {
         if (isProtectedRoute || isAdminRoute) {
+            // Redirect về trang login, kèm theo URL gốc để sau login quay lại
             const loginUrl = new URL("/login", request.url);
             loginUrl.searchParams.set("from", pathname);
             return NextResponse.redirect(loginUrl);
         }
-        return NextResponse.next();
+        return NextResponse.next(); // Cho qua (trang công khai)
     }
 
     // Có token → giải mã và xác thực
     try {
         const { payload } = await jwtVerify(token, JWT_SECRET);
 
+        // Đã đăng nhập rồi mà vào /login hoặc /register → redirect về trang chủ
         if (isAuthRoute) {
             return NextResponse.redirect(new URL("/", request.url));
         }
 
+        // Vào route admin nhưng không phải admin → redirect về trang chủ
         if (isAdminRoute && payload.role !== "admin") {
             return NextResponse.redirect(new URL("/", request.url));
         }
 
+        /**
+         * Đính kèm thông tin user vào request header.
+         * Tên user tiếng Việt có dấu (Unicode) không thể đưa trực tiếp vào HTTP Header,
+         * phải dùng encodeURIComponent() để mã hóa thành dạng ASCII.
+         */
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set("x-user-id", String(payload.userId));
         requestHeaders.set("x-user-role", String(payload.role));
@@ -70,6 +79,7 @@ export async function middleware(request: NextRequest) {
 
         return NextResponse.next({ request: { headers: requestHeaders } });
     } catch (error: any) {
+        // Token không hợp lệ hoặc hết hạn → xóa cookie và redirect về login
         const loginUrl = new URL("/login", request.url);
         loginUrl.searchParams.set("error", "token_invalid_" + error.message);
         const response = NextResponse.redirect(loginUrl);
@@ -79,8 +89,9 @@ export async function middleware(request: NextRequest) {
 }
 
 /**
- * config.matcher: Middleware chỉ chạy trên các route này.
+ * config.matcher: Proxy chỉ chạy trên các route này.
  * Không chạy trên: _next/static, _next/image, favicon.ico, file trong public/
+ * → Tránh lãng phí tài nguyên chạy proxy cho file tĩnh.
  */
 export const config = {
     matcher: [
