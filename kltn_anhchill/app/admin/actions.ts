@@ -1,19 +1,23 @@
 'use server';
 
-import fs from "fs";
-import path from "path";
 import { transcribeVideo } from "@/lib/whisper";
+import { uploadAudioToCloudinary } from "@/lib/cloudinary";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
+ * Dự án: KLTN_anhchill - Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562
  *
  * Tại sao dùng Server Action thay vì API Route?
- * 1. Hỗ trợ file lớn: Server Action cho phép cấu hình giới hạn dung lượng (bodySizeLimit) 
- *    lên đến 50MB hoặc hơn trong next.config.ts, trong khi API Route thường bị giới hạn thấp hơn.
+ * 1. Hỗ trợ file lớn: Server Action cho phép cấu hình giới hạn dung lượng (bodySizeLimit)
+ *    lên đến 50MB hoặc hơn trong next.config.ts.
  * 2. Bảo mật: Tự động hỗ trợ CSRF và chạy trực tiếp trên môi trường Server.
  * 3. Tích hợp tốt: Xử lý FormData một cách tự nhiên và đồng bộ với vòng đời của Next.js.
+ *
+ * THAY ĐỔI (Cloudinary Integration):
+ * - Không còn lưu file vào /public/ (không hoạt động trên Vercel)
+ * - Upload trực tiếp lên Cloudinary từ buffer → lấy URL cố định
  */
 export async function uploadVideoAction(formData: FormData) {
     try {
@@ -28,21 +32,21 @@ export async function uploadVideoAction(formData: FormData) {
             throw new Error("Thiếu file hoặc tiêu đề bài học");
         }
 
-        // Lưu file vào thư mục /public
+        // Convert file sang buffer
         const buffer = Buffer.from(await file.arrayBuffer());
         const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-        const publicPath = path.join(process.cwd(), "public", fileName);
-        
-        fs.writeFileSync(publicPath, buffer);
 
-        // Gọi AI xử lý (Whisper)
-        const { fullText, segments } = await transcribeVideo(publicPath);
+        // Chạy song song: upload Cloudinary + transcribe Groq
+        const [cloudinaryUrl, { fullText, segments }] = await Promise.all([
+            uploadAudioToCloudinary(buffer, fileName),
+            transcribeVideo(buffer, file.name),
+        ]);
 
-        // Lưu vào Database
+        // Lưu vào Database với Cloudinary URL
         const newVideo = await Video.create({
             title,
             description,
-            videoUrl: `/${fileName}`,
+            videoUrl: cloudinaryUrl,
             script: fullText,
             segments,
             level,
@@ -55,6 +59,7 @@ export async function uploadVideoAction(formData: FormData) {
                 id: newVideo._id.toString(),
                 title: newVideo.title,
                 segmentCount: segments.length,
+                audioUrl: cloudinaryUrl,
             }
         };
 
