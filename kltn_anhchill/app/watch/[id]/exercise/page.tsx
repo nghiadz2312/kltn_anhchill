@@ -284,4 +284,5 @@ export default function ExercisePage({ params }: { params: Promise<{ id: string 
             </div>
         </div>
     );
-}
+} 
+ 
