@@ -4,17 +4,17 @@ import { jwtVerify } from "jose";
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
  * 
- * Proxy (trước đây gọi là Middleware) là gì?
- * → Proxy là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler.
- *   Mọi request đến server đều đi qua proxy trước.
+ * Middleware là gì?
+ * → Middleware là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler.
+ *   Mọi request đến server đều đi qua middleware trước.
  * 
- * Tại sao cần Proxy thay vì kiểm tra trong từng page?
+ * Tại sao cần Middleware thay vì kiểm tra trong từng page?
  * → Nếu kiểm tra trong từng page, lỡ quên 1 page là có lỗ hổng bảo mật.
- *   Proxy tập trung logic bảo vệ ở 1 nơi → không bỏ sót.
+ *   Middleware tập trung logic bảo vệ ở 1 nơi → không bỏ sót.
  *   Đây là nguyên tắc DRY (Don't Repeat Yourself) trong lập trình.
  * 
  * Luồng hoạt động:
- * User truy cập /admin → Proxy bắt request → Kiểm tra JWT cookie
+ * User truy cập /admin → Middleware bắt request → Kiểm tra JWT cookie
  * → Có token hợp lệ + role=admin → Cho qua
  * → Không có token hoặc role=student → Redirect về /login
  */
@@ -23,7 +23,7 @@ const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || "engchill-secret-key-change-in-production"
 );
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get("engchill-token")?.value;
 
@@ -89,9 +89,9 @@ export async function proxy(request: NextRequest) {
 }
 
 /**
- * config.matcher: Proxy chỉ chạy trên các route này.
+ * config.matcher: Middleware chỉ chạy trên các route này.
  * Không chạy trên: _next/static, _next/image, favicon.ico, file trong public/
- * → Tránh lãng phí tài nguyên chạy proxy cho file tĩnh.
+ * → Tránh lãng phí tài nguyên chạy middleware cho file tĩnh.
  */
 export const config = {
     matcher: [
