@@ -1,20 +1,35 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 import dbConnect from "@/lib/dbConnect";
 import UserProgress from "@/models/UserProgress";
 
 /**
  * GET /api/user/progress
  * Lấy lịch sử làm bài của người dùng hiện tại.
- * userId được đọc từ header (do middleware đính kèm sau khi xác thực JWT).
+ * userId được đọc trực tiếp từ JWT cookie (không phụ thuộc middleware).
  */
 export async function GET(req: Request) {
     try {
         await dbConnect();
 
-        // Middleware đã giải mã JWT và đính kèm userId vào header
-        const userId = req.headers.get("x-user-id");
-        if (!userId) {
+        // Đọc JWT token trực tiếp từ cookie
+        const cookieStore = await cookies();
+        const token = cookieStore.get("engchill-token")?.value;
+
+        if (!token) {
             return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+        }
+
+        const JWT_SECRET = new TextEncoder().encode(
+            process.env.JWT_SECRET || "engchill-secret-key-change-in-production"
+        );
+
+        const { payload } = await jwtVerify(token, JWT_SECRET);
+        const userId = payload.userId as string;
+
+        if (!userId) {
+            return NextResponse.json({ error: "Token không hợp lệ" }, { status: 401 });
         }
 
         /**
