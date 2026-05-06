@@ -55,7 +55,10 @@ export async function transcribeVideo(
         console.log("🤖 Đang gửi audio lên Groq Whisper AI...");
 
         // Tạo File object từ buffer (Groq SDK chấp nhận File/Blob)
-        const audioFile = new File([audioBuffer], fileName, {
+        // Phải convert Buffer → Uint8Array để TypeScript không lỗi kiểu
+        // (Buffer<ArrayBufferLike> không gán được cho BlobPart trực tiếp)
+        const uint8 = new Uint8Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.byteLength);
+        const audioFile = new File([uint8], fileName, {
             type: getAudioMimeType(fileName),
         });
 
