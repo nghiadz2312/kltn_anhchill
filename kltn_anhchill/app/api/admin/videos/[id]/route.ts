@@ -5,18 +5,14 @@ import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import Question from "@/models/Question";
 import UserProgress from "@/models/UserProgress";
+import { deleteFromCloudinary } from "@/lib/cloudinary";
 
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * Khi xóa 1 video, cần xóa theo thứ tự (cascade delete):
- * 1. File vật lý trong /public       → giải phóng dung lượng ổ cứng
- * 2. Các câu hỏi liên quan (Question) → tránh "orphan data" trong DB
- * 3. Lịch sử làm bài (UserProgress)  → tránh "orphan data" trong DB
- * 4. Bản ghi Video trong MongoDB      → xóa cuối cùng
- *
- * "Orphan data" là dữ liệu mồ côi — tham chiếu đến document đã bị xóa,
- * gây lãng phí dung lượng và có thể gây lỗi khi query sau này.
+ * Cập nhật hàm DELETE để hỗ trợ Cloudinary:
+ * 1. Nhận diện URL: Nếu là link Cloudinary, gọi API Cloudinary để xóa asset.
+ * 2. An toàn trên Vercel: Wrap việc xóa file cục bộ trong try-catch vì 
+ *    filesystem trên Vercel là read-only, có thể gây crash nếu không xử lý.
  */
 export async function DELETE(
     req: Request,
@@ -26,19 +22,28 @@ export async function DELETE(
         await dbConnect();
         const { id } = await params;
 
-        // Tìm video trước để lấy tên file
         const video = await Video.findById(id);
         if (!video) {
             return NextResponse.json({ error: "Không tìm thấy video" }, { status: 404 });
         }
 
-        // 1. Xóa file vật lý khỏi /public
+        // 1. Xóa file vật lý hoặc Cloudinary asset
         if (video.videoUrl) {
-            const fileName = video.videoUrl.replace(/^\//, ""); // bỏ "/" đầu
-            const filePath = path.join(process.cwd(), "public", fileName);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-                console.log(`🗑️ Đã xóa file: ${filePath}`);
+            if (video.videoUrl.startsWith("http")) {
+                // Xóa trên Cloudinary
+                await deleteFromCloudinary(video.videoUrl);
+            } else {
+                // Xóa file cục bộ (chỉ chạy được ở local)
+                try {
+                    const fileName = video.videoUrl.replace(/^\//, "");
+                    const filePath = path.join(process.cwd(), "public", fileName);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                        console.log(`🗑️ Đã xóa file local: ${filePath}`);
+                    }
+                } catch (fsError) {
+                    console.warn("Không thể xóa file local (có thể đang chạy trên Vercel):", fsError);
+                }
             }
         }
 

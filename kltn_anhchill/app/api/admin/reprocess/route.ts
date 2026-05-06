@@ -2,20 +2,18 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { transcribeVideo } from "@/lib/whisper";
+import { fetchFileFromUrl } from "@/lib/cloudinary";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * Tại sao loại bỏ hỗ trợ link YouTube?
- * 1. Kiểm soát dữ liệu: Chỉ cho phép các file mp3/mp4 cục bộ để đảm bảo tính ổn định của hệ thống.
- * 2. Bảo mật & Bản quyền: Tránh việc vi phạm chính sách của bên thứ 3 và các vấn đề về CORS khi phát audio.
- * 3. Tập trung vào tính năng cốt lõi: Tập trung vào xử lý AI (Whisper/LLaMA) trên các file dữ liệu chuẩn được upload.
- *
- * API này thực hiện:
- * - Tìm file âm thanh tương ứng với VideoId trong thư mục /public/uploads.
- * - Gửi file cục bộ này tới Whisper AI để tạo Transcript và Timestamps.
+ * API re-process được cập nhật để chạy trên Vercel:
+ * 1. Không phụ thuộc vào filesystem (fs) khi chạy production.
+ * 2. Tự động nhận diện URL:
+ *    - Nếu là Cloudinary (https://): Fetch file từ Cloudinary về buffer.
+ *    - Nếu là local (/uploads/): Đọc file từ disk (chỉ dùng khi test local).
+ * 3. Truyền Buffer vào Whisper AI: Fix lỗi build TypeScript (string vs Buffer).
  */
 export async function POST(req: Request) {
     try {
@@ -26,49 +24,46 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Thiếu videoId" }, { status: 400 });
         }
 
-        // ── BƯỚC 1: Lấy thông tin video từ DB ──
         const video = await Video.findById(videoId);
         if (!video) {
             return NextResponse.json({ error: "Không tìm thấy video" }, { status: 404 });
         }
 
-        // Kiểm tra xem có phải link YouTube không (đã loại bỏ hỗ trợ)
-        const isYoutube = video.videoUrl.includes('youtube.com') || video.videoUrl.includes('youtu.be');
-        if (isYoutube) {
-            return NextResponse.json(
-                { error: "Hệ thống đã dừng hỗ trợ link YouTube. Vui lòng sử dụng file mp3/mp4 cục bộ." },
-                { status: 400 }
-            );
-        }
+        console.log(`🔄 Re-processing: "${video.title}" (${videoId})`);
 
-        console.log(`🔄 Re-processing local file: "${video.title}" (${videoId})`);
+        let buffer: Buffer;
+        const isCloudinary = video.videoUrl.startsWith("http");
 
-        // ── BƯỚC 2: Tìm file vật lý trong /public ──
-        const relativePath = video.videoUrl.replace(/^\//, ""); // "/abc.mp3" → "abc.mp3"
-        let filePath = path.join(process.cwd(), "public", relativePath);
+        if (isCloudinary) {
+            // ── TRƯỜNG HỢP 1: File đã trên Cloudinary ──
+            console.log(`☁️ Đang lấy file từ Cloudinary...`);
+            buffer = await fetchFileFromUrl(video.videoUrl);
+        } else {
+            // ── TRƯỜNG HỢP 2: File cục bộ (chỉ hoạt động ở localhost) ──
+            const relativePath = video.videoUrl.replace(/^\//, "");
+            let filePath = path.join(process.cwd(), "public", relativePath);
 
-        // Nếu không tìm thấy, thử tìm trực tiếp tên file trong thư mục public
-        if (!fs.existsSync(filePath)) {
-            const justFileName = path.basename(video.videoUrl);
-            const fallbackPath = path.join(process.cwd(), "public", justFileName);
-            
-            if (fs.existsSync(fallbackPath)) {
-                filePath = fallbackPath;
-            } else {
-                return NextResponse.json(
-                    { error: `Không tìm thấy file vật lý tại /public. Vui lòng upload lại file.` },
-                    { status: 404 }
-                );
+            if (!fs.existsSync(filePath)) {
+                // Thử tìm trong thư mục public gốc
+                const fileName = path.basename(video.videoUrl);
+                filePath = path.join(process.cwd(), "public", fileName);
+                
+                if (!fs.existsSync(filePath)) {
+                    throw new Error("Không tìm thấy file cục bộ. Vui lòng migrate sang Cloudinary trước.");
+                }
             }
+            
+            console.log(`📂 Đang đọc file từ local storage...`);
+            buffer = fs.readFileSync(filePath);
         }
 
-        // ── BƯỚC 3: Gọi Whisper AI để lấy transcript ──
-        console.log(`🤖 Gửi file cục bộ tới Whisper AI...`);
-        const { fullText, segments } = await transcribeVideo(filePath);
+        // ── BƯỚC 3: Gọi Whisper AI với BUFFER ──
+        console.log(`🤖 Gửi buffer tới Whisper AI...`);
+        const { fullText, segments } = await transcribeVideo(buffer, path.basename(video.videoUrl));
 
         if (!fullText || fullText.length < 10) {
             return NextResponse.json(
-                { error: "AI không nhận diện được nội dung từ file âm thanh này" },
+                { error: "AI không nhận diện được nội dung âm thanh." },
                 { status: 422 }
             );
         }
@@ -79,14 +74,11 @@ export async function POST(req: Request) {
             segments: segments,
         });
 
-        console.log(`✅ Đã cập nhật xong dữ liệu từ file local`);
-
         return NextResponse.json({
             success: true,
-            message: `Xử lý file cục bộ thành công!`,
+            message: `Xử lý AI thành công!`,
             data: {
                 videoId,
-                title: video.title,
                 segmentCount: segments.length,
             },
         });
