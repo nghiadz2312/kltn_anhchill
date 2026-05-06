@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@distube/ytdl-core": "^4.15.9",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "groq-sdk": "^1.1.2",
