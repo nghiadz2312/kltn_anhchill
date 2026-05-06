@@ -9,6 +9,7 @@ interface Video {
     viewCount: number;
     createdAt: string;
     segments?: any[];
+    collections?: string[];
 }
 
 /**
@@ -22,13 +23,14 @@ interface Video {
  *   hiểu rõ từng component khi hội đồng hỏi.
  */
 export default function AdminPage() {
-    const [tab, setTab] = useState<'upload' | 'manage'>('upload');
+    const [tab, setTab] = useState<'upload' | 'manage' | 'collections'>('upload');
 
     // ── UPLOAD STATE ──
     const [file, setFile] = useState<File | null>(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [level, setLevel] = useState('Intermediate');
+    const [selectedCol, setSelectedCol] = useState('');
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<string[]>([]);
     const [uploadDone, setUploadDone] = useState(false);
@@ -39,12 +41,75 @@ export default function AdminPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [reprocessingId, setReprocessingId] = useState<string | null>(null);
 
+    // ── COLLECTIONS STATE ──
+    const [collections, setCollections] = useState<any[]>([]);
+    const [loadingCols, setLoadingCols] = useState(false);
+    const [creatingCol, setCreatingCol] = useState(false);
+    const [newColName, setNewColName] = useState('');
+    const [newColDesc, setNewColDesc] = useState('');
+    const [newColColor, setNewColColor] = useState('blue');
+
     const addLog = (msg: string) => setUploadProgress(prev => [...prev, msg]);
 
-    // Khi đổi sang tab quản lý → tải danh sách video
+    // Tải danh sách bộ sưu tập khi mount
+    useEffect(() => {
+        fetchCollections();
+    }, []);
+
+    // Khi đổi tab
     useEffect(() => {
         if (tab === 'manage') fetchVideos();
+        if (tab === 'collections') fetchCollections();
     }, [tab]);
+
+    const fetchCollections = async () => {
+        setLoadingCols(true);
+        try {
+            const res = await fetch('/api/collections');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setCollections(data);
+                // Nếu chưa chọn bộ sưu tập nào và có dữ liệu, chọn mặc định cái đầu tiên hoặc "Nhạc"
+                if (!selectedCol && data.length > 0) {
+                    const music = data.find((c: any) => c.name === 'Nhạc');
+                    setSelectedCol(music ? music._id : data[0]._id);
+                }
+            }
+        } finally {
+            setLoadingCols(false);
+        }
+    };
+
+    const handleCreateCollection = async () => {
+        if (!newColName.trim()) return alert('Nhập tên bộ sưu tập');
+        setCreatingCol(true);
+        try {
+            const res = await fetch('/api/collections', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-user-role': 'admin' },
+                body: JSON.stringify({ name: newColName, description: newColDesc, color: newColColor }),
+            });
+            if (res.ok) {
+                setNewColName('');
+                setNewColDesc('');
+                fetchCollections();
+            }
+        } finally {
+            setCreatingCol(false);
+        }
+    };
+
+    const handleDeleteCollection = async (id: string, name: string) => {
+        if (!confirm(`Xóa bộ sưu tập "${name}"? Các video trong đó sẽ không bị xóa.`)) return;
+        try {
+            const res = await fetch(`/api/collections/${id}`, { 
+                method: 'DELETE',
+                headers: { 'x-user-role': 'admin' }
+            });
+            if (res.ok) fetchCollections();
+            else alert('Lỗi khi xóa');
+        } catch { alert('Lỗi kết nối'); }
+    };
 
     const fetchVideos = async () => {
         setLoadingVideos(true);
@@ -113,6 +178,7 @@ export default function AdminPage() {
                     description,
                     level,
                     fileName: file.name,
+                    collectionId: selectedCol,
                 }),
             });
 
@@ -201,6 +267,26 @@ export default function AdminPage() {
         }
     };
 
+    const handleUpdateCollection = async (videoId: string, collectionId: string) => {
+        try {
+            const res = await fetch(`/api/admin/videos/${videoId}/metadata`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'x-user-role': 'admin' },
+                body: JSON.stringify({ collectionId }),
+            });
+            if (res.ok) {
+                // Cập nhật state local
+                setVideos(prev => prev.map(v => 
+                    v._id === videoId ? { ...v, collections: [collectionId] } : v
+                ));
+            } else {
+                alert('Lỗi khi cập nhật bộ sưu tập');
+            }
+        } catch {
+            alert('Lỗi kết nối');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 py-10 px-4">
             <div className="max-w-4xl mx-auto">
@@ -219,15 +305,16 @@ export default function AdminPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 mb-8 bg-slate-900 border border-slate-800 rounded-2xl p-1.5">
+                <div className="flex gap-2 mb-8 bg-slate-900 border border-slate-800 rounded-2xl p-1.5 overflow-x-auto">
                     {[
                         { key: 'upload', label: '📤 Upload bài mới' },
-                        { key: 'manage', label: `📋 Quản lý bài học (${videos.length})` },
+                        { key: 'manage', label: `📋 Bài học (${videos.length})` },
+                        { key: 'collections', label: '📚 Bộ sưu tập' },
                     ].map(t => (
                         <button
                             key={t.key}
                             onClick={() => setTab(t.key as any)}
-                            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                            className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
                                 tab === t.key
                                     ? 'bg-blue-500 text-white shadow-lg'
                                     : 'text-slate-400 hover:text-white'
@@ -277,6 +364,21 @@ export default function AdminPage() {
                                         <option value="Intermediate">🔵 Intermediate</option>
                                         <option value="Advanced">🔴 Advanced</option>
                                     </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-slate-400 text-sm mb-2">Bộ sưu tập</label>
+                                    <select
+                                        value={selectedCol}
+                                        onChange={e => setSelectedCol(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500"
+                                    >
+                                        {collections.map(c => (
+                                            <option key={c._id} value={c._id}>{c.name}</option>
+                                        ))}
+                                        {collections.length === 0 && <option value="">(Chưa có bộ sưu tập)</option>}
+                                    </select>
+                                    <p className="text-slate-500 text-[10px] mt-1 ml-1">💡 Bạn có thể tạo thêm trong tab "Bộ sưu tập"</p>
                                 </div>
 
                                 {/* File Upload */}
@@ -388,9 +490,19 @@ export default function AdminPage() {
                                             )}
                                         </div>
                                         <p className="text-white font-bold truncate">{v.title}</p>
-                                        <p className="text-slate-600 text-xs mt-0.5">
-                                            {new Date(v.createdAt).toLocaleDateString('vi-VN')}
-                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-slate-500 text-[10px] uppercase font-bold">Chủ đề:</span>
+                                            <select
+                                                value={v.collections?.[0] || ''}
+                                                onChange={(e) => handleUpdateCollection(v._id, e.target.value)}
+                                                className="bg-slate-800 border border-slate-700 text-blue-400 text-[10px] font-bold rounded-lg px-2 py-0.5 focus:outline-none focus:border-blue-500"
+                                            >
+                                                <option value="">-- Chưa chọn --</option>
+                                                {collections.map(c => (
+                                                    <option key={c._id} value={c._id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         {/* Nút Whisper: chỉ hiện khi video chưa có segments */}
@@ -428,6 +540,103 @@ export default function AdminPage() {
                                 </div>
                             ))
                         )}
+                    </div>
+                )}
+
+                {/* ─── TAB COLLECTIONS ─── */}
+                {tab === 'collections' && (
+                    <div className="space-y-6">
+                        {/* Form tạo mới */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                            <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                                <span>✨</span> Tạo bộ sưu tập mới
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-slate-500 text-xs ml-1">Tên bộ sưu tập *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="VD: Nhạc, Phim, Toeic..."
+                                        value={newColName}
+                                        onChange={e => setNewColName(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-slate-500 text-xs ml-1">Màu sắc hiển thị</label>
+                                    <select
+                                        value={newColColor}
+                                        onChange={e => setNewColColor(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
+                                    >
+                                        <option value="blue">🔵 Màu xanh dương</option>
+                                        <option value="green">🟢 Màu xanh lá</option>
+                                        <option value="purple">🟣 Màu tím</option>
+                                        <option value="orange">🟠 Màu cam</option>
+                                        <option value="red">🔴 Màu đỏ</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <label className="text-slate-500 text-xs ml-1">Mô tả (tuỳ chọn)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Nhập mô tả ngắn gọn về chủ đề này..."
+                                        value={newColDesc}
+                                        onChange={e => setNewColDesc(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleCreateCollection}
+                                disabled={creatingCol || !newColName.trim()}
+                                className="w-full mt-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+                            >
+                                {creatingCol ? '⏳ Đang xử lý...' : '➕ Thêm bộ sưu tập mới'}
+                            </button>
+                        </div>
+
+                        {/* Danh sách hiện có */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {loadingCols ? (
+                                <div className="col-span-full text-center py-10">
+                                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                    <p className="text-slate-500 text-sm">Đang tải danh sách...</p>
+                                </div>
+                            ) : collections.length === 0 ? (
+                                <div className="col-span-full text-center py-16 bg-slate-900/50 border border-dashed border-slate-800 rounded-3xl">
+                                    <p className="text-4xl mb-4">📂</p>
+                                    <p className="text-slate-500 italic">Chưa có bộ sưu tập nào. Hãy tạo cái đầu tiên!</p>
+                                </div>
+                            ) : (
+                                collections.map(c => (
+                                    <div key={c._id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex items-center justify-between hover:border-slate-700 transition-colors group">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-3 h-12 rounded-full shadow-lg ${
+                                                c.color === 'blue' ? 'bg-blue-500 shadow-blue-500/20' :
+                                                c.color === 'green' ? 'bg-green-500 shadow-green-500/20' :
+                                                c.color === 'purple' ? 'bg-violet-500 shadow-violet-500/20' :
+                                                c.color === 'orange' ? 'bg-orange-500 shadow-orange-500/20' :
+                                                'bg-red-500 shadow-red-500/20'
+                                            }`}></div>
+                                            <div>
+                                                <h3 className="text-white font-bold group-hover:text-blue-400 transition-colors">{c.name}</h3>
+                                                <p className="text-slate-500 text-[10px] uppercase tracking-wider font-bold mt-0.5">
+                                                    {c.videos?.length || 0} bài học
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteCollection(c._id, c.name)}
+                                            className="w-10 h-10 bg-slate-800 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded-xl transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                                            title="Xóa bộ sưu tập"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

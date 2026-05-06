@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     try {
         await dbConnect();
 
-        const { cloudinaryUrl, title, description, level, fileName } = await req.json();
+        const { cloudinaryUrl, title, description, level, fileName, collectionId } = await req.json();
 
         if (!cloudinaryUrl || !title) {
             return NextResponse.json(
@@ -59,8 +59,17 @@ export async function POST(req: Request) {
             script: fullText,
             segments,
             level: level || "Intermediate",
+            collections: collectionId ? [collectionId] : [],
             createdAt: new Date(),
         });
+
+        // Nếu có collectionId, cập nhật Collection model
+        if (collectionId) {
+            const Collection = (await import("@/models/Collection")).default;
+            await Collection.findByIdAndUpdate(collectionId, {
+                $addToSet: { videos: newVideo._id }
+            });
+        }
 
         return NextResponse.json({
             success: true,
