@@ -41,6 +41,11 @@ export default function AdminPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [reprocessingId, setReprocessingId] = useState<string | null>(null);
 
+    // ── EDIT TRANSCRIPT STATE ──
+    const [editingVideo, setEditingVideo] = useState<any | null>(null);
+    const [editSegments, setEditSegments] = useState<any[]>([]);
+    const [savingTranscript, setSavingTranscript] = useState(false);
+
     // ── COLLECTIONS STATE ──
     const [collections, setCollections] = useState<any[]>([]);
     const [loadingCols, setLoadingCols] = useState(false);
@@ -287,6 +292,29 @@ export default function AdminPage() {
         }
     };
 
+    const handleSaveTranscript = async () => {
+        if (!editingVideo) return;
+        setSavingTranscript(true);
+        try {
+            const res = await fetch(`/api/admin/videos/${editingVideo._id}/metadata`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'x-user-role': 'admin' },
+                body: JSON.stringify({ segments: editSegments }),
+            });
+            if (res.ok) {
+                alert('✅ Đã lưu transcript mới!');
+                setEditingVideo(null);
+                fetchVideos();
+            } else {
+                alert('❌ Lưu thất bại');
+            }
+        } catch {
+            alert('Lỗi kết nối');
+        } finally {
+            setSavingTranscript(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 py-10 px-4">
             <div className="max-w-4xl mx-auto">
@@ -517,6 +545,16 @@ export default function AdminPage() {
                                             </button>
                                         )}
                                         <button
+                                            onClick={() => {
+                                                setEditingVideo(v);
+                                                setEditSegments([...(v.segments || [])]);
+                                            }}
+                                            title="Sửa lời (Transcript)"
+                                            className="w-9 h-9 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl transition-colors flex items-center justify-center text-sm"
+                                        >
+                                            ✎
+                                        </button>
+                                        <button
                                             onClick={() => handleGenerateExercise(v._id)}
                                             title="Sinh bài tập AI"
                                             className="w-9 h-9 bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 rounded-xl transition-colors flex items-center justify-center text-sm"
@@ -640,6 +678,66 @@ export default function AdminPage() {
                     </div>
                 )}
             </div>
+
+            {/* ─── MODAL SỬA TRANSCRIPT ─── */}
+            {editingVideo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+                        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-white font-bold text-xl">✎ Sửa Transcript</h2>
+                                <p className="text-slate-500 text-sm truncate max-w-[400px]">{editingVideo.title}</p>
+                            </div>
+                            <button 
+                                onClick={() => setEditingVideo(null)}
+                                className="text-slate-400 hover:text-white w-8 h-8 rounded-full hover:bg-slate-800 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                            {editSegments.length === 0 ? (
+                                <div className="text-center py-10 text-slate-500 italic">Video này chưa có transcript để sửa.</div>
+                            ) : (
+                                editSegments.map((seg, idx) => (
+                                    <div key={idx} className="flex gap-4 items-start group">
+                                        <div className="text-slate-600 font-mono text-[10px] pt-3 w-12 text-right">
+                                            {Math.floor(seg.start / 60)}:{(seg.start % 60).toFixed(0).padStart(2, '0')}
+                                        </div>
+                                        <textarea
+                                            value={seg.text}
+                                            onChange={(e) => {
+                                                const newSegs = [...editSegments];
+                                                newSegs[idx].text = e.target.value;
+                                                setEditSegments(newSegs);
+                                            }}
+                                            rows={1}
+                                            className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500 transition-colors text-sm resize-none"
+                                        />
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="p-6 border-t border-slate-800 flex gap-3">
+                            <button
+                                onClick={() => setEditingVideo(null)}
+                                className="flex-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-2xl hover:bg-slate-700 transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleSaveTranscript}
+                                disabled={savingTranscript || editSegments.length === 0}
+                                className="flex-[2] bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-bold py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+                            >
+                                {savingTranscript ? '⏳ Đang lưu...' : '💾 Lưu thay đổi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

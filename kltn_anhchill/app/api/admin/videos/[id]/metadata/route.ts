@@ -20,7 +20,7 @@ export async function PATCH(
 
         const { id } = await params;
         const body = await req.json();
-        const { collectionId } = body;
+        const { collectionId, segments } = body;
 
         // 1. Tìm video cũ để lấy collection cũ (nếu có)
         const oldVideo = await Video.findById(id);
@@ -28,10 +28,19 @@ export async function PATCH(
 
         const oldCollectionId = oldVideo.collections && oldVideo.collections[0];
 
-        // 2. Cập nhật Video
+        // 2. Chuẩn bị dữ liệu cập nhật
+        const updateData: any = {};
+        if (collectionId !== undefined) {
+            updateData.collections = collectionId ? [collectionId] : [];
+        }
+        if (segments !== undefined) {
+            updateData.segments = segments;
+        }
+
+        // 3. Cập nhật Video
         const updatedVideo = await Video.findByIdAndUpdate(
             id,
-            { collections: collectionId ? [collectionId] : [] },
+            updateData,
             { new: true }
         );
 
