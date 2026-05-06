@@ -4,6 +4,8 @@ import { jwtVerify } from "jose";
 import dbConnect from "@/lib/dbConnect";
 import UserProgress from "@/models/UserProgress";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/user/progress
  * Lấy lịch sử làm bài của người dùng hiện tại.

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Collection from "@/models/Collection";
 
+export const dynamic = "force-dynamic";
+
 /** GET /api/collections — Lấy tất cả bộ sưu tập */
 export async function GET() {
     try {
