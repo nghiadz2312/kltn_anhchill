@@ -40,7 +40,7 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (!user) return;
-        fetch('/api/user/progress', { cache: 'no-store' })
+        fetch(`/api/user/progress?t=${Date.now()}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => {
                 if (Array.isArray(data.progress)) setProgress(data.progress);

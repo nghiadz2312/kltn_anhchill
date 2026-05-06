@@ -46,7 +46,13 @@ export async function GET(req: Request) {
             .sort({ completedAt: -1 }) // Mới nhất trước
             .limit(20);                // Chỉ lấy 20 bài gần nhất
 
-        return NextResponse.json({ progress });
+        const response = NextResponse.json({ progress });
+        // Ép không cho cache ở bất kỳ cấp độ nào
+        response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        
+        return response;
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
