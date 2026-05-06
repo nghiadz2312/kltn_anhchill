@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { uploadVideoAction } from './actions';
 
 interface Video {
     _id: string;
@@ -65,39 +64,78 @@ export default function AdminPage() {
         setUploadDone(false);
         setUploadProgress([]);
 
-        addLog('📤 Đang gửi file lên server...');
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('level', level);
-
         try {
-            addLog('🤖 Groq Whisper AI đang transcribe audio...');
-            addLog('⏳ Quá trình này có thể mất 10-30 giây...');
+            // ── BƯỚC 1: Lấy chữ ký upload từ server ──
+            addLog('🔐 Đang lấy quyền upload từ server...');
+            const signRes = await fetch('/api/admin/upload-sign');
+            if (!signRes.ok) throw new Error('Không lấy được chữ ký upload');
+            const { signature, timestamp, cloudName, apiKey, folder } = await signRes.json();
 
-            // Gọi Server Action thay vì fetch API
-            const result = await uploadVideoAction(formData);
+            // ── BƯỚC 2: Upload file thẳng lên Cloudinary từ browser ──
+            // (Bypass Vercel hoàn toàn — không bị timeout)
+            addLog(`📤 Đang upload "${file.name}" lên Cloudinary...`);
+            addLog('⏳ Bước này có thể mất 10-30 giây tuỳ file...');
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('timestamp', timestamp.toString());
+            formData.append('signature', signature);
+            formData.append('api_key', apiKey);
+            formData.append('folder', folder);
+            // resource_type KHÔNG append vào FormData — nó đã nằm trong URL path (/video/upload)
+            // Thêm vào FormData sẽ gây lỗi Invalid Signature
+
+
+            const cloudRes = await fetch(
+                `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+                { method: 'POST', body: formData }
+            );
+
+            if (!cloudRes.ok) {
+                const err = await cloudRes.json();
+                throw new Error(`Cloudinary: ${err.error?.message || 'Upload thất bại'}`);
+            }
+
+            const cloudData = await cloudRes.json();
+            const cloudinaryUrl = cloudData.secure_url;
+            addLog(`☁️ Upload Cloudinary thành công!`);
+
+            // ── BƯỚC 3: Gửi URL lên server để AI transcribe ──
+            addLog('🤖 Groq Whisper AI đang transcribe audio...');
+            addLog('⏳ Bước này mất 10-20 giây...');
+
+            const processRes = await fetch('/api/admin/process-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cloudinaryUrl,
+                    title,
+                    description,
+                    level,
+                    fileName: file.name,
+                }),
+            });
+
+            const result = await processRes.json();
 
             if (result.success) {
                 addLog(`✅ Hoàn tất! AI trích xuất được ${result.data?.segmentCount || '?'} câu.`);
                 addLog(`📦 Đã lưu bài "${result.data?.title}" vào database.`);
                 setUploadDone(true);
-                // Reset form
                 setTitle('');
                 setDescription('');
                 setFile(null);
                 setLevel('Intermediate');
             } else {
-                addLog(`❌ Lỗi: ${result.error}`);
+                addLog(`❌ Lỗi AI: ${result.error}`);
             }
         } catch (err: any) {
-            addLog(`❌ Lỗi kết nối: ${err.message || 'Server overloaded'}`);
+            addLog(`❌ Lỗi: ${err.message || 'Lỗi không xác định'}`);
         } finally {
             setUploading(false);
         }
     };
+
 
     const handleDelete = async (id: string, title: string) => {
         if (!confirm(`Xóa bài "${title}"? Thao tác không thể hoàn tác!`)) return;
