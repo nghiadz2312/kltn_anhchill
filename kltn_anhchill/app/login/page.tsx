@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 
 /**
  * Trang Đăng nhập
@@ -38,16 +39,16 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (!res.ok) {
-                alert("Lỗi từ server: " + (data.error || 'Không xác định'));
+                toast.error(data.error || 'Đăng nhập thất bại');
                 setError(data.error || 'Đăng nhập thất bại');
                 return;
             }
 
             // Đăng nhập thành công
-            alert("✅ Đăng nhập thành công! Phản hồi từ server đã OK. Đang chuyển trang...");
+            toast.success("Chào mừng bạn quay trở lại!");
             window.location.href = '/';
         } catch (e: any) {
-            alert("❌ Lỗi try/catch trên trình duyệt: " + e.message);
+            toast.error("Lỗi kết nối: " + e.message);
             setError('Không thể kết nối server, thử lại sau');
         } finally {
             setLoading(false);

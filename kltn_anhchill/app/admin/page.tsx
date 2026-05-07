@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { toast } from 'react-toastify';
 
 interface Video {
     _id: string;
@@ -86,7 +87,7 @@ export default function AdminPage() {
     };
 
     const handleCreateCollection = async () => {
-        if (!newColName.trim()) return alert('Nhập tên bộ sưu tập');
+        if (!newColName.trim()) return toast.warn('Vui lòng nhập tên bộ sưu tập');
         setCreatingCol(true);
         try {
             const res = await fetch('/api/collections', {
@@ -95,6 +96,7 @@ export default function AdminPage() {
                 body: JSON.stringify({ name: newColName, description: newColDesc, color: newColColor }),
             });
             if (res.ok) {
+                toast.success(`Đã tạo bộ sưu tập "${newColName}"`);
                 setNewColName('');
                 setNewColDesc('');
                 fetchCollections();
@@ -111,9 +113,12 @@ export default function AdminPage() {
                 method: 'DELETE',
                 headers: { 'x-user-role': 'admin' }
             });
-            if (res.ok) fetchCollections();
-            else alert('Lỗi khi xóa');
-        } catch { alert('Lỗi kết nối'); }
+            if (res.ok) {
+                toast.success('Đã xóa bộ sưu tập');
+                fetchCollections();
+            }
+            else toast.error('Lỗi khi xóa bộ sưu tập');
+        } catch { toast.error('Lỗi kết nối server'); }
     };
 
     const fetchVideos = async () => {
@@ -126,7 +131,7 @@ export default function AdminPage() {
 
     const handleUpload = async () => {
         if (!file || !title.trim()) {
-            alert('Vui lòng nhập tiêu đề và chọn file!');
+            toast.warn('Vui lòng nhập tiêu đề và chọn file!');
             return;
         }
 
@@ -214,9 +219,10 @@ export default function AdminPage() {
         try {
             const res = await fetch(`/api/admin/videos/${id}`, { method: 'DELETE' });
             if (res.ok) {
+                toast.success(`Đã xóa bài "${title}"`);
                 setVideos(prev => prev.filter(v => v._id !== id));
             } else {
-                alert('Xóa thất bại, thử lại!');
+                toast.error('Xóa thất bại, vui lòng thử lại!');
             }
         } finally {
             setDeletingId(null);
@@ -233,12 +239,12 @@ export default function AdminPage() {
             });
             const data = await res.json();
             if (data.error) {
-                alert(`❌ Lỗi: ${data.error}\n\n💡 Video này chưa có transcript. Hãy bấm nút ⚙️ để xử lý Whisper trước.`);
+                toast.error(`Lỗi: ${data.error}`);
             } else {
-                alert(`✅ Đã sinh ${data.questions?.length || 0} câu hỏi!`);
+                toast.success(`✅ Đã sinh ${data.questions?.length || 0} câu hỏi AI!`);
             }
         } catch {
-            alert('Lỗi sinh bài tập');
+            toast.error('Lỗi hệ thống khi sinh bài tập');
         }
     };
 
@@ -259,14 +265,13 @@ export default function AdminPage() {
             });
             const data = await res.json();
             if (data.success) {
-                alert(`✅ Hoàn tất!\n📝 ${data.data.segmentCount} câu\n📄 ${data.data.scriptLength} ký tự transcript\n\nGiờ có thể sinh bài tập AI được rồi!`);
-                // Tải lại danh sách để cập nhật trạng thái segments
+                toast.success(`Hoàn tất xử lý Whisper! (${data.data.segmentCount} câu)`);
                 fetchVideos();
             } else {
-                alert(`❌ Lỗi: ${data.error}`);
+                toast.error(`Lỗi AI: ${data.error}`);
             }
         } catch {
-            alert('Lỗi kết nối server khi re-process');
+            toast.error('Lỗi kết nối server khi re-process');
         } finally {
             setReprocessingId(null);
         }
@@ -280,15 +285,15 @@ export default function AdminPage() {
                 body: JSON.stringify({ collectionId }),
             });
             if (res.ok) {
-                // Cập nhật state local
+                toast.success('Đã cập nhật bộ sưu tập');
                 setVideos(prev => prev.map(v => 
                     v._id === videoId ? { ...v, collections: [collectionId] } : v
                 ));
             } else {
-                alert('Lỗi khi cập nhật bộ sưu tập');
+                toast.error('Lỗi khi cập nhật bộ sưu tập');
             }
         } catch {
-            alert('Lỗi kết nối');
+            toast.error('Lỗi kết nối server');
         }
     };
 
@@ -302,14 +307,14 @@ export default function AdminPage() {
                 body: JSON.stringify({ segments: editSegments }),
             });
             if (res.ok) {
-                alert('✅ Đã lưu transcript mới!');
+                toast.success('Đã lưu transcript mới!');
                 setEditingVideo(null);
                 fetchVideos();
             } else {
-                alert('❌ Lưu thất bại');
+                toast.error('Lưu transcript thất bại');
             }
         } catch {
-            alert('Lỗi kết nối');
+            toast.error('Lỗi kết nối server');
         } finally {
             setSavingTranscript(false);
         }
