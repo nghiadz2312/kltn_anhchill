@@ -6,6 +6,10 @@ import Video from "@/models/Video";
 import Question from "@/models/Question";
 import UserProgress from "@/models/UserProgress";
 import { deleteFromCloudinary } from "@/lib/cloudinary";
+import { jwtVerify } from "jose";
+import { cookies } from "next/headers";
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback_secret");
 
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
@@ -19,6 +23,12 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("token")?.value;
+        if (!token) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+        const { payload } = await jwtVerify(token, secret);
+        if (payload.role !== "admin") return NextResponse.json({ error: "Không có quyền admin" }, { status: 403 });
+
         await dbConnect();
         const { id } = await params;
 
@@ -78,6 +88,12 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("token")?.value;
+        if (!token) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+        const { payload } = await jwtVerify(token, secret);
+        if (payload.role !== "admin") return NextResponse.json({ error: "Không có quyền admin" }, { status: 403 });
+
         await dbConnect();
         const { id } = await params;
         const body = await req.json();
