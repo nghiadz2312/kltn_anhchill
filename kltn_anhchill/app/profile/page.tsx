@@ -61,9 +61,11 @@ export default function ProfilePage() {
     const totalDone = progress.length;
     // 💡 Chuyển sang hệ điểm 10
     const avgScore = totalDone > 0 ? (progress.reduce((s, p) => s + p.score, 0) / totalDone / 10).toFixed(1) : "0.0";
-    const totalCorrect = progress.reduce((s, p) => s + p.correctCount, 0);
-    const totalQuestions = progress.reduce((s, p) => s + p.totalQuestions, 0);
-    const accuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions * 10).toFixed(1) : "0.0";
+    
+    // 💡 Tính điểm cao nhất từng đạt được
+    const highestScore = totalDone > 0 
+        ? (Math.max(...progress.map(p => p.score)) / 10).toFixed(1) 
+        : "0.0";
 
     return (
         <div className="min-h-screen bg-slate-950 py-10 px-4">
@@ -87,11 +89,11 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:flex-row md:grid-cols-3 gap-6">
                     {[
                         { label: 'Bài đã làm', val: totalDone, icon: '📝', color: 'text-blue-400' },
                         { label: 'Điểm trung bình', val: avgScore, icon: '⭐', color: 'text-yellow-400' },
-                        { label: 'Tỉ lệ đúng', val: accuracy, icon: '🎯', color: 'text-green-400' },
+                        { label: 'Điểm cao nhất', val: highestScore, icon: '🏆', color: 'text-orange-400' },
                     ].map(s => (
                         <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 text-center shadow-lg">
                             <div className="text-3xl mb-2">{s.icon}</div>
