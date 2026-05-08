@@ -226,7 +226,7 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
                         </div>
 
                         {/* Danh sách câu — có thể cuộn */}
-                        <div ref={transcriptRef} className="flex-1 overflow-y-auto p-6 space-y-2">
+                        <div ref={transcriptRef} className="flex-1 overflow-y-auto p-6 space-y-2 custom-scrollbar">
                             {hasSegments ? (
                                 video.segments.map((seg, idx) => (
                                     <p

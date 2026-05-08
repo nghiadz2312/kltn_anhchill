@@ -13,7 +13,6 @@ export default function RegisterPage() {
         e.preventDefault();
         setError('');
 
-        // Validate client-side trước khi gửi lên server
         if (form.password !== form.confirm) {
             setError('Mật khẩu xác nhận không khớp');
             return;
@@ -42,7 +41,6 @@ export default function RegisterPage() {
                 return;
             }
 
-            // Đăng ký thành công → chuyển sang trang login
             router.push('/login?registered=true');
         } catch {
             setError('Không thể kết nối server');

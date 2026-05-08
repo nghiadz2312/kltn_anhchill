@@ -31,7 +31,7 @@ export default function HomePage() {
             .catch(() => setLoading(false));
     }, []);
 
-    // Lọc + tìm kiếm ở client-side (đơn giản, có thể chuyển lên API sau)
+    // Lọc + tìm kiếm ở client-side
     const filtered = videos.filter(v => {
         const matchSearch = v.title.toLowerCase().includes(search.toLowerCase());
         const matchLevel = filterLevel ? v.level === filterLevel : true;
@@ -56,7 +56,7 @@ export default function HomePage() {
 
                 <div className="relative max-w-4xl mx-auto text-center">
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium px-4 py-2 rounded-full mb-6">
-                        🤖 Powered by Groq Whisper AI + GPT
+                        🤖 Powered by Whisper AI + Groq
                     </div>
                     <h1 className="text-5xl md:text-6xl font-black text-white mb-4 leading-tight">
                         Học tiếng Anh<br />
@@ -99,7 +99,7 @@ export default function HomePage() {
                     {[
                         { icon: '🎧', title: 'Nghe Audio', desc: 'File MP3/MP4 chất lượng cao' },
                         { icon: '📄', title: 'Transcript AI', desc: 'Whisper tự động transcribe' },
-                        { icon: '📝', title: 'Bài tập GPT', desc: 'Quiz sinh tự động từ AI' },
+                        { icon: '📝', title: 'Bài tập AI', desc: 'Quiz sinh tự động từ AI' },
                     ].map((f) => (
                         <div key={f.title} className="space-y-1">
                             <div className="text-2xl">{f.icon}</div>

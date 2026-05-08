@@ -11,13 +11,10 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
     title: {
-        default: "EngChill — Học tiếng Anh qua Video",
-        template: "%s | EngChill", // Trang Watch sẽ hiện "Tên bài | EngChill"
+        template: '%s | EngChill',
+        default: 'EngChill - Học tiếng Anh thật chill',
     },
-    description:
-        "Nền tảng học tiếng Anh thông minh: xem video, đọc transcript tự động (AI Whisper), làm bài tập được sinh tự động (AI GPT). Học tiếng Anh thật chill!",
-    keywords: ["học tiếng anh", "luyện nghe", "english", "AI", "whisper", "engchill"],
-    authors: [{ name: "Nguyễn Giang Tuấn Nghĩa" }],
+    description: "Học tiếng Anh qua audio và transcript thông minh",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,18 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <main className="flex-1">
                         {children}
                     </main>
-                    <ToastContainer 
-                        position="bottom-right"
-                        autoClose={3000}
-                        hideProgressBar={false}
-                        newestOnTop={false}
-                        closeOnClick
-                        rtl={false}
-                        pauseOnFocusLoss
-                        draggable
-                        pauseOnHover
-                        theme="dark"
-                    />
+                    <ToastContainer theme="dark" position="bottom-right" />
                 </AuthProvider>
             </body>
         </html>
