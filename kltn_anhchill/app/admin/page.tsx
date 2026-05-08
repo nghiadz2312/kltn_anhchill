@@ -71,7 +71,8 @@ export default function AdminPage() {
     const fetchCollections = async () => {
         setLoadingCols(true);
         try {
-            const res = await fetch('/api/collections');
+            // 💡 FIX LỖI TRÊN VERCEL: Thêm timestamp để đảm bảo Admin luôn thấy dữ liệu mới nhất vừa tạo
+            const res = await fetch(`/api/collections?t=${Date.now()}`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setCollections(data);
@@ -124,10 +125,10 @@ export default function AdminPage() {
     const fetchVideos = async () => {
         setLoadingVideos(true);
         /**
-         * 💡 NOTE BẢO VỆ: Truyền thêm ?admin=true để API trả về đầy đủ các trường segments, 
-         * giúp hiển thị trạng thái "Đã có transcript" hay chưa.
+         * 💡 NOTE BẢO VỆ: Truyền thêm ?admin=true và timestamp để API trả về dữ liệu mới nhất,
+         * giúp hiển thị chính xác trạng thái transcript.
          */
-        const res = await fetch('/api/videos?admin=true');
+        const res = await fetch(`/api/videos?admin=true&t=${Date.now()}`);
         const data = await res.json();
         if (Array.isArray(data)) setVideos(data);
         setLoadingVideos(false);
