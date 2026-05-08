@@ -172,7 +172,7 @@ export default function ExercisePage({ params }: { params: Promise<{ id: string 
                     {/* Header Score Card */}
                     <div className={`rounded-[3rem] p-10 border shadow-2xl text-center ${score >= 80 ? 'bg-green-500/10 border-green-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
                         <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-4">Kết quả bài tập</p>
-                        <div className="text-8xl font-black text-white mb-4">{score}%</div>
+                        <div className="text-8xl font-black text-white mb-4">{(score / 10).toFixed(1)}</div>
                         <h2 className="text-2xl font-bold text-white mb-8">{feedback}</h2>
                         <div className="flex gap-4 justify-center">
                             <button onClick={() => loadQuestions(true)} className="bg-blue-500 text-white font-black px-8 py-4 rounded-2xl shadow-lg">LÀM BÀI MỚI</button>

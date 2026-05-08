@@ -35,6 +35,7 @@ export default function Header() {
                         <Link
                             key={l.href}
                             href={l.href}
+                            prefetch={false}
                             className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                                 pathname === l.href
                                     ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -52,7 +53,11 @@ export default function Header() {
                         <div className="w-20 h-8 bg-white/5 rounded-xl animate-pulse" />
                     ) : user ? (
                         <>
-                            <Link href="/profile" className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 py-2 transition-all">
+                            <Link 
+                                href="/profile" 
+                                prefetch={false}
+                                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-3 py-2 transition-all"
+                            >
                                 <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                                     {user.name.charAt(0).toUpperCase()}
                                 </div>

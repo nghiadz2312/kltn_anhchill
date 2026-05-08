@@ -31,6 +31,7 @@ interface ProgressRecord {
 export default function ProfilePage() {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
     const [progress, setProgress] = useState<ProgressRecord[]>([]);
     const [loadingProgress, setLoadingProgress] = useState(true);
 
@@ -40,9 +41,11 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (!user) return;
+        setLoadingProgress(true);
         /**
          * 💡 GIẢI THÍCH CHO HỘI ĐỒNG: Kỹ thuật phá cache cho dữ liệu cá nhân.
          * Profile là dữ liệu riêng tư, tuyệt đối không được để Vercel cache lại bản cũ của người khác.
+         * Thêm pathname vào dependency để ép làm mới mỗi khi chuyển trang.
          */
         fetch(`/api/user/progress?t=${Date.now()}`, { cache: 'no-store' })
             .then(r => r.json())
@@ -51,15 +54,16 @@ export default function ProfilePage() {
                 setLoadingProgress(false);
             })
             .catch(() => setLoadingProgress(false));
-    }, [user]);
+    }, [user, pathname]);
 
     if (loading || !user) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-blue-500">Loading profile...</div>;
 
     const totalDone = progress.length;
-    const avgScore = totalDone > 0 ? Math.round(progress.reduce((s, p) => s + p.score, 0) / totalDone) : 0;
+    // 💡 Chuyển sang hệ điểm 10
+    const avgScore = totalDone > 0 ? (progress.reduce((s, p) => s + p.score, 0) / totalDone / 10).toFixed(1) : "0.0";
     const totalCorrect = progress.reduce((s, p) => s + p.correctCount, 0);
     const totalQuestions = progress.reduce((s, p) => s + p.totalQuestions, 0);
-    const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+    const accuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions * 10).toFixed(1) : "0.0";
 
     return (
         <div className="min-h-screen bg-slate-950 py-10 px-4">
@@ -86,8 +90,8 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {[
                         { label: 'Bài đã làm', val: totalDone, icon: '📝', color: 'text-blue-400' },
-                        { label: 'Điểm trung bình', val: `${avgScore}%`, icon: '⭐', color: 'text-yellow-400' },
-                        { label: 'Tỉ lệ đúng', val: `${accuracy}%`, icon: '🎯', color: 'text-green-400' },
+                        { label: 'Điểm trung bình', val: avgScore, icon: '⭐', color: 'text-yellow-400' },
+                        { label: 'Tỉ lệ đúng', val: accuracy, icon: '🎯', color: 'text-green-400' },
                     ].map(s => (
                         <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 text-center shadow-lg">
                             <div className="text-3xl mb-2">{s.icon}</div>
@@ -112,7 +116,7 @@ export default function ProfilePage() {
                             {progress.map(p => (
                                 <div key={p._id} className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 flex flex-col md:flex-row items-center gap-6 hover:border-slate-600 transition-all shadow-md group">
                                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-xl flex-shrink-0 ${p.score >= 80 ? 'bg-green-500/20 text-green-500' : p.score >= 50 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-500'}`}>
-                                        {p.score}%
+                                        {(p.score / 10).toFixed(1)}
                                     </div>
                                     <div className="flex-1 text-center md:text-left min-w-0">
                                         <h3 className="text-white font-bold text-lg truncate group-hover:text-blue-400 transition-colors">{p.videoId?.title}</h3>

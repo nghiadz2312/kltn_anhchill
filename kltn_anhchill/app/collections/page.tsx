@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 interface VideoBasic {
@@ -22,18 +23,18 @@ export default function CollectionsPage() {
     const [collections, setCollections] = useState<CollectionData[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedColId, setExpandedColId] = useState<string | null>(null);
+    const pathname = usePathname();
 
     useEffect(() => {
+        setLoading(true); // Đảm bảo hiện loading mỗi khi chuyển trang
         /**
-         * 💡 FIX LỖI TRẮNG TRANG TRÊN VERCEL:
-         * - Thêm ?t=${Date.now()}: Tạo URL duy nhất mỗi lần load để "phá" cache trình duyệt.
-         * - Thêm cache: 'no-store': Ép Next.js không lưu kết quả vào Data Cache.
+         * 💡 FIX LỖI TRẮNG TRANG: Thêm pathname vào dependency để ép fetch lại mỗi khi click menu.
          */
         fetch(`/api/collections?t=${Date.now()}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => { setCollections(Array.isArray(data) ? data : []); setLoading(false); })
             .catch(() => setLoading(false));
-    }, []);
+    }, [pathname]);
 
     const toggleExpand = (id: string) => {
         setExpandedColId(expandedColId === id ? null : id);
