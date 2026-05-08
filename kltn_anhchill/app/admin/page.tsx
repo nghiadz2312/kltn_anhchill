@@ -123,7 +123,11 @@ export default function AdminPage() {
 
     const fetchVideos = async () => {
         setLoadingVideos(true);
-        const res = await fetch('/api/videos');
+        /**
+         * 💡 NOTE BẢO VỆ: Truyền thêm ?admin=true để API trả về đầy đủ các trường segments, 
+         * giúp hiển thị trạng thái "Đã có transcript" hay chưa.
+         */
+        const res = await fetch('/api/videos?admin=true');
         const data = await res.json();
         if (Array.isArray(data)) setVideos(data);
         setLoadingVideos(false);

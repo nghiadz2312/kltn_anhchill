@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import Question from "@/models/Question";
-import { generateExercises } from "@/lib/gpt";
+import { generateExercises } from "@/lib/groq";
 
 /**
  * 📘 GIẢI THÍCH CHO HỘI ĐỒNG:
