@@ -24,7 +24,12 @@ export default function CollectionsPage() {
     const [expandedColId, setExpandedColId] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/collections')
+        /**
+         * 💡 FIX LỖI TRẮNG TRANG TRÊN VERCEL:
+         * - Thêm ?t=${Date.now()}: Tạo URL duy nhất mỗi lần load để "phá" cache trình duyệt.
+         * - Thêm cache: 'no-store': Ép Next.js không lưu kết quả vào Data Cache.
+         */
+        fetch(`/api/collections?t=${Date.now()}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => { setCollections(Array.isArray(data) ? data : []); setLoading(false); })
             .catch(() => setLoading(false));

@@ -40,6 +40,10 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (!user) return;
+        /**
+         * 💡 GIẢI THÍCH CHO HỘI ĐỒNG: Kỹ thuật phá cache cho dữ liệu cá nhân.
+         * Profile là dữ liệu riêng tư, tuyệt đối không được để Vercel cache lại bản cũ của người khác.
+         */
         fetch(`/api/user/progress?t=${Date.now()}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => {

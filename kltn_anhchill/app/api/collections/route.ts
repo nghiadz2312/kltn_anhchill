@@ -11,7 +11,11 @@ export async function GET() {
         const collections = await Collection.find({})
             .sort({ order: 1, createdAt: -1 })
             .populate("videos", "title level viewCount"); // Lấy thông tin cơ bản của video
-        return NextResponse.json(collections);
+            
+        // 💡 GIẢI THÍCH CHO HỘI ĐỒNG: Ép Header không cho phép Cache ở bất kỳ cấp độ nào (Vercel, Browser, CDN)
+        const response = NextResponse.json(collections);
+        response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        return response;
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
