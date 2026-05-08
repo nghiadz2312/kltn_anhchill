@@ -201,7 +201,7 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
                                 href={`/watch/${id}/exercise`}
                                 className="block text-center bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-bold py-4 rounded-2xl transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-purple-500/25 text-sm"
                             >
-                                📝 Bài tập AI
+                                📝 Bài tập Groq
                             </Link>
                             <Link
                                 href={`/watch/${id}/dictation`}

@@ -99,7 +99,7 @@ export default function HomePage() {
                     {[
                         { icon: '🎧', title: 'Nghe Audio', desc: 'File MP3/MP4 chất lượng cao' },
                         { icon: '📄', title: 'Transcript AI', desc: 'Whisper tự động transcribe' },
-                        { icon: '📝', title: 'Bài tập AI', desc: 'Quiz sinh tự động từ AI' },
+                        { icon: '📝', title: 'Bài tập Groq', desc: 'Quiz sinh tự động từ AI' },
                     ].map((f) => (
                         <div key={f.title} className="space-y-1">
                             <div className="text-2xl">{f.icon}</div>
