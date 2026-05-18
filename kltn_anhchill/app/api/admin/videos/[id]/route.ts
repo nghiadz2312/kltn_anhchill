@@ -80,6 +80,26 @@ export async function DELETE(
 }
 
 /**
+ * GET /api/admin/videos/[id]
+ * Lấy đầy đủ thông tin video kèm segments để sửa transcript.
+ * Chỉ được gọi khi Admin bấm nút "Sửa transcript" — không load trước.
+ */
+export async function GET(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        await dbConnect();
+        const { id } = await params;
+        const video = await Video.findById(id).select("title segments");
+        if (!video) return NextResponse.json({ error: "Không tìm thấy" }, { status: 404 });
+        return NextResponse.json(video);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+/**
  * PATCH /api/admin/videos/[id]
  * Cập nhật thông tin video (title, description, level)
  */
@@ -99,7 +119,7 @@ export async function PATCH(
         const body = await req.json();
 
         // Chỉ cho phép cập nhật các trường an toàn
-        const allowedFields = ["title", "description", "level", "thumbnail"];
+        const allowedFields = ["title", "description", "level", "thumbnail", "segments"];
         const updateData: Record<string, any> = {};
         for (const field of allowedFields) {
             if (body[field] !== undefined) updateData[field] = body[field];

@@ -9,7 +9,7 @@ interface Video {
     level: string;
     viewCount: number;
     createdAt: string;
-    segments?: any[];
+    segmentCount?: number; // Số lượng segments — chỉ là số đếm, không phải dữ liệu đầy đủ
     collections?: string[];
 }
 
@@ -46,6 +46,7 @@ export default function AdminPage() {
     const [editingVideo, setEditingVideo] = useState<any | null>(null);
     const [editSegments, setEditSegments] = useState<any[]>([]);
     const [savingTranscript, setSavingTranscript] = useState(false);
+    const [loadingTranscript, setLoadingTranscript] = useState(false);
 
     // ── COLLECTIONS STATE ──
     const [collections, setCollections] = useState<any[]>([]);
@@ -521,8 +522,8 @@ export default function AdminPage() {
                                                 'bg-blue-500/20 text-blue-400'
                                             }`}>{v.level}</span>
                                             <span className="text-slate-600 text-xs">{v.viewCount} views</span>
-                                            {v.segments && v.segments.length > 0 ? (
-                                                <span className="text-xs text-green-400">✓ {v.segments.length} segments</span>
+                                            {v.segmentCount && v.segmentCount > 0 ? (
+                                                <span className="text-xs text-green-400">✓ {v.segmentCount} segments</span>
                                             ) : (
                                                 <span className="text-xs text-amber-400">⚠️ Chưa có transcript</span>
                                             )}
@@ -544,7 +545,7 @@ export default function AdminPage() {
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         {/* Nút Whisper: chỉ hiện khi video chưa có segments */}
-                                        {(!v.segments || v.segments.length === 0) && (
+                                        {(!v.segmentCount || v.segmentCount === 0) && (
                                             <button
                                                 onClick={() => handleReprocess(v._id, v.title)}
                                                 disabled={reprocessingId === v._id}
@@ -555,9 +556,15 @@ export default function AdminPage() {
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 setEditingVideo(v);
-                                                setEditSegments([...(v.segments || [])]);
+                                                setEditSegments([]);
+                                                setLoadingTranscript(true);
+                                                // Lazy-load: chỉ fetch segments khi mở modal
+                                                const res = await fetch(`/api/admin/videos/${v._id}`);
+                                                const data = await res.json();
+                                                setEditSegments(data.segments || []);
+                                                setLoadingTranscript(false);
                                             }}
                                             title="Sửa lời (Transcript)"
                                             className="w-9 h-9 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl transition-colors flex items-center justify-center text-sm"
@@ -707,7 +714,12 @@ export default function AdminPage() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {editSegments.length === 0 ? (
+                            {loadingTranscript ? (
+                                <div className="text-center py-16">
+                                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                    <p className="text-slate-500 text-sm">Đang tải transcript...</p>
+                                </div>
+                            ) : editSegments.length === 0 ? (
                                 <div className="text-center py-10 text-slate-500 italic">Video này chưa có transcript để sửa.</div>
                             ) : (
                                 editSegments.map((seg, idx) => (

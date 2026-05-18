@@ -12,16 +12,30 @@ export async function GET(req: Request) {
 
         /**
          * 📚 GIẢI THÍCH CHO HỘI ĐỒNG (Tối ưu hiệu năng):
-         * - Nếu là User thường: Ta dùng .select("-segments -script") để LOẠI BỎ 2 trường dữ liệu nặng.
-         *   Giúp trang chủ tải cực nhanh ngay cả khi có hàng trăm video.
-         * - Nếu là Admin: Ta lấy ĐẦY ĐỦ để kiểm tra trạng thái xử lý AI của video.
-         * Đây gọi là kỹ thuật Selective Field Projection trong MongoDB.
+         * 
+         * Trước đây: Admin fetch toàn bộ video kèm cả `segments` + `script` (rất nặng, chậm).
+         * Vấn đề: `segments` là mảng chứa hàng trăm câu với timestamp → dữ liệu khổng lồ.
+         * 
+         * Giải pháp: Dùng MongoDB Aggregation Pipeline:
+         * - $addFields: Tính `segmentCount` = số phần tử trong mảng segments
+         * - $project: Loại bỏ hoàn toàn `segments` và `script` khỏi response
+         * 
+         * Kết quả: Admin chỉ nhận metadata nhẹ + số lượng segments.
+         * Khi cần sửa transcript, frontend gọi riêng /api/admin/videos/[id] để lấy đầy đủ.
          */
-        const selectFields = isAdmin ? "" : "-segments -script";
-        
-        const videos = await Video.find({}).select(selectFields).sort({ createdAt: -1 });
+        if (isAdmin) {
+            const videos = await Video.aggregate([
+                { $sort: { createdAt: -1 } },
+                { $addFields: { segmentCount: { $size: { $ifNull: ["$segments", []] } } } },
+                { $project: { script: 0, segments: 0 } },
+            ]);
+            return NextResponse.json(videos);
+        }
+
+        // User thường: loại bỏ segments + script (giữ nguyên logic cũ)
+        const videos = await Video.find({}).select("-segments -script").sort({ createdAt: -1 });
         return NextResponse.json(videos);
     } catch (error) {
         return NextResponse.json({ error: "Lỗi DB" }, { status: 500 });
     }
-}
+}

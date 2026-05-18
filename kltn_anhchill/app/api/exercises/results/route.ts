@@ -3,13 +3,21 @@ import dbConnect from "@/lib/dbConnect";
 import UserProgress from "@/models/UserProgress";
 import Question from "@/models/Question";
 import Video from "@/models/Video";
+import User from "@/models/User";
+import Collection from "@/models/Collection";
+
+export const dynamic = "force-dynamic";
+
+// 🔑 Buộc Next.js bundler giữ lại tất cả model imports (ngăn tree-shaking).
+// Mongoose resolve quan hệ populate() qua string — bundler không tự phát hiện được.
+void { UserProgress, Question, Video, User, Collection };
 
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
  * Dự án: KLTN_anhchill
  * Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562 - Đại học Thăng Long
  * 
- * API này dùng để lấy lại chi tiết một bài làm cũ.
+ * API này dùng để lấy lại chi tiết một bài làm cũ (tính năng "Xem lại").
  * 
  * TẠI SAO CẦN?
  * Khi người dùng vào Dashboard và bấm "Xem lại", hệ thống cần biết:
