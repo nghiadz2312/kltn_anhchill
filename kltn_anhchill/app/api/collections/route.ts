@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Collection from "@/models/Collection";
 import Video from "@/models/Video";
+import Question from "@/models/Question";
+import User from "@/models/User";
+import UserProgress from "@/models/UserProgress";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,7 @@ export async function GET() {
         response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
         return response;
     } catch (error: any) {
+        console.error("LỖI API COLLECTIONS:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

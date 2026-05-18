@@ -4,6 +4,9 @@ import { jwtVerify } from "jose";
 import dbConnect from "@/lib/dbConnect";
 import UserProgress from "@/models/UserProgress";
 import Video from "@/models/Video";
+import Question from "@/models/Question";
+import User from "@/models/User";
+import Collection from "@/models/Collection";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +58,7 @@ export async function GET(req: Request) {
         
         return response;
     } catch (error: any) {
+        console.error("LỖI API PROGRESS:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
