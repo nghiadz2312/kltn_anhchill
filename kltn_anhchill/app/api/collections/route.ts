@@ -8,6 +8,12 @@ import UserProgress from "@/models/UserProgress";
 
 export const dynamic = "force-dynamic";
 
+// 🔑 QUAN TRỌNG: Buộc Next.js bundler giữ lại tất cả model imports.
+// Mongoose resolve các quan hệ populate() qua string, không qua biến JS.
+// Bundler không biết điều này và sẽ tree-shake (xóa) các import "không dùng".
+// Tham chiếu tường minh ở đây ngăn tree-shaking xảy ra.
+void { Collection, Video, Question, User, UserProgress };
+
 /** GET /api/collections — Lấy tất cả bộ sưu tập */
 export async function GET() {
     try {
