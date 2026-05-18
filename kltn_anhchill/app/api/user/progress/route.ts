@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import dbConnect from "@/lib/dbConnect";
 import UserProgress from "@/models/UserProgress";
+import Video from "@/models/Video";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Collection from "@/models/Collection";
+import Video from "@/models/Video";
 
 export const dynamic = "force-dynamic";
 
