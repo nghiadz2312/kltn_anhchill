@@ -12,10 +12,9 @@ export async function PATCH(
         await dbConnect();
         
         const role = req.headers.get("x-user-role");
-        // Kiểm tra quyền admin (hoặc kiểm tra từ session nếu cần bảo mật hơn)
+        // Kiểm tra quyền admin
         if (role !== "admin") {
-            // return NextResponse.json({ error: "Không có quyền" }, { status: 403 });
-            // Tạm thời cho phép nếu có header hoặc logic auth hiện tại của dự án
+            return NextResponse.json({ error: "Không có quyền admin" }, { status: 403 });
         }
 
         const { id } = await params;

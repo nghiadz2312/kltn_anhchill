@@ -4,22 +4,27 @@ import { jwtVerify } from "jose";
 /**
  * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
  * 
- * Proxy (tên mới của Middleware trong Next.js 16) là gì?
- * → Proxy là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler.
- *   Mọi request đến server đều đi qua proxy trước.
+ * Middleware (Bộ lọc trung gian) là gì?
+ * → Middleware là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler (API hoặc Page).
+ *   Mọi request đến server (khớp với matcher) đều đi qua middleware trước.
  * 
- * Tại sao cần Proxy thay vì kiểm tra trong từng page?
- * → Nếu kiểm tra trong từng page, lỡ quên 1 page là có lỗ hổng bảo mật.
- *   Proxy tập trung logic bảo vệ ở 1 nơi → không bỏ sót.
- *   Đây là nguyên tắc DRY (Don't Repeat Yourself) trong lập trình.
+ * Tại sao cần Middleware thay vì kiểm tra trong từng page/API?
+ * → Nếu kiểm tra thủ công ở từng trang hoặc API, lỡ quên 1 nơi sẽ tạo ra lỗ hổng bảo mật.
+ *   Middleware tập trung logic bảo vệ ở 1 nơi duy nhất → an toàn, không bỏ sót.
+ *   Đây là nguyên tắc DRY (Don't Repeat Yourself) trong kỹ nghệ phần mềm.
  * 
  * Luồng hoạt động:
- * User truy cập /admin → Proxy bắt request → Kiểm tra JWT cookie
- * → Có token hợp lệ + role=admin → Cho qua
- * → Không có token hoặc role=student → Redirect về /login
+ * 1. User gửi request truy cập trang/API (ví dụ: /admin)
+ * 2. Middleware bắt request → Đọc JWT token từ cookie `engchill-token`.
+ * 3. Nếu không có token:
+ *    - Nếu là trang bảo mật hoặc admin: Redirect về trang `/login`.
+ * 4. Nếu có token:
+ *    - Giải mã token bằng JWT_SECRET để lấy payload (userId, role, name, email).
+ *    - Nếu truy cập trang admin (`/admin` hoặc `/api/admin`) mà role KHÔNG PHẢI "admin" → Redirect về trang chủ `/`.
+ *    - Đính kèm thông tin user (id, role, name) vào request headers để các API phía sau sử dụng ngay mà không cần giải mã lại.
  */
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const JWT_SECRET = new TextEncoder().encode(
         process.env.JWT_SECRET || "engchill-secret-key-change-in-production"
     );
@@ -68,7 +73,7 @@ export async function proxy(request: NextRequest) {
         }
 
         /**
-         * Đính kèm thông tin user vào request header.
+         * Đính kèm thông tin user vào request header để các API xử lý phía sau lấy được ngay.
          * Tên user tiếng Việt có dấu (Unicode) không thể đưa trực tiếp vào HTTP Header,
          * phải dùng encodeURIComponent() để mã hóa thành dạng ASCII.
          */
@@ -89,8 +94,8 @@ export async function proxy(request: NextRequest) {
 }
 
 /**
- * config.matcher: Proxy chỉ chạy trên các route cần kiểm tra quyền.
- * Các trang công khai như trang chủ (/) sẽ KHÔNG đi qua proxy.
+ * config.matcher: Middleware chỉ chạy trên các route được định nghĩa ở đây.
+ * Các trang công khai khác sẽ KHÔNG đi qua middleware để tối ưu hiệu năng.
  */
 export const config = {
     matcher: [

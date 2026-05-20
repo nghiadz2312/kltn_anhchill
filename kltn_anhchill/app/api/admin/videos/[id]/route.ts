@@ -24,7 +24,7 @@ export async function DELETE(
 ) {
     try {
         const cookieStore = await cookies();
-        const token = cookieStore.get("token")?.value;
+        const token = cookieStore.get("engchill-token")?.value;
         if (!token) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
         const { payload } = await jwtVerify(token, secret);
         if (payload.role !== "admin") return NextResponse.json({ error: "Không có quyền admin" }, { status: 403 });
@@ -109,7 +109,7 @@ export async function PATCH(
 ) {
     try {
         const cookieStore = await cookies();
-        const token = cookieStore.get("token")?.value;
+        const token = cookieStore.get("engchill-token")?.value;
         if (!token) return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
         const { payload } = await jwtVerify(token, secret);
         if (payload.role !== "admin") return NextResponse.json({ error: "Không có quyền admin" }, { status: 403 });
