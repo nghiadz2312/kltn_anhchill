@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 /**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
  * 
- * Middleware (Bộ lọc trung gian) là gì?
+ *  (Bộ lọc trung gian)
  * → Middleware là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler (API hoặc Page).
  *   Mọi request đến server (khớp với matcher) đều đi qua middleware trước.
  * 
