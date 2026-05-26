@@ -12,18 +12,7 @@ export const dynamic = "force-dynamic";
 // Mongoose resolve quan hệ populate() qua string — bundler không tự phát hiện được.
 void { UserProgress, Question, Video, User, Collection };
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Dự án: KLTN_anhchill
- * Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562 - Đại học Thăng Long
- * 
- * API này dùng để lấy lại chi tiết một bài làm cũ (tính năng "Xem lại").
- * 
- * TẠI SAO CẦN?
- * Khi người dùng vào Dashboard và bấm "Xem lại", hệ thống cần biết:
- * 1. Họ đã trả lời những gì? (Lấy từ UserProgress)
- * 2. Câu hỏi gốc và các phương án là gì? (Lấy từ Question model bằng cách populate)
- */
+// Lấy chi tiết bài làm cũ để "Xem lại" — populate câu hỏi gốc từ Question model
 
 export async function GET(req: NextRequest) {
     try {

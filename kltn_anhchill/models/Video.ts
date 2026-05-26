@@ -1,22 +1,5 @@
 import mongoose from "mongoose";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * So với phiên bản cũ, Video model bây giờ có thêm:
- *
- * 1. segments[] — Mảng lưu từng câu kèm timestamp từ Whisper
- *    → Đây là dữ liệu cốt lõi để tính năng highlight transcript hoạt động
- *
- * 2. thumbnail — Ảnh bìa (URL), để trang chủ hiển thị preview đẹp
- *
- * 3. duration — Thời lượng audio tính bằng giây
- *
- * 4. collections[] — Video có thể thuộc nhiều bộ sưu tập (quan hệ nhiều-nhiều)
- *    → Đây là ref đến Collection model, dùng populate() để lấy chi tiết
- *
- * 5. createdAt, updatedAt — timestamps: true tự thêm
- */
 
 const segmentSchema = new mongoose.Schema({
     id: { type: Number },

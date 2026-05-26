@@ -13,18 +13,12 @@ interface Video {
     collections?: string[];
 }
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Admin Dashboard gồm 2 tab:
- * 1. "Upload bài mới" - upload file audio/video → AI tự xử lý
- * 2. "Quản lý bài học" - xem/xóa danh sách video đã có
- *
- * Tại sao không dùng thư viện UI có sẵn?
- * → Tự xây dựng giúp kiểm soát hoàn toàn UX,
- *   hiểu rõ từng component khi hội đồng hỏi.
- */
 export default function AdminPage() {
-    const [tab, setTab] = useState<'upload' | 'manage' | 'collections'>('upload');
+    const [tab, setTab] = useState<'upload' | 'manage' | 'collections' | 'stats'>('upload');
+
+    const [stats, setStats] = useState<any>(null);
+    const [loadingStats, setLoadingStats] = useState(false);
+    const [userSearch, setUserSearch] = useState('');
 
     // ── UPLOAD STATE ──
     const [file, setFile] = useState<File | null>(null);
@@ -67,7 +61,36 @@ export default function AdminPage() {
     useEffect(() => {
         if (tab === 'manage') fetchVideos();
         if (tab === 'collections') fetchCollections();
+        if (tab === 'stats') fetchStats();
     }, [tab]);
+
+    /**
+     * 📊 fetchStats — Gọi API thống kê toàn hệ thống
+     *
+     * API /api/admin/stats chạy 9 MongoDB query SONG SONG (Promise.all) để tối ưu tốc độ:
+     *   - countDocuments × 4: đếm user/video/progress/question
+     *   - aggregate: tính điểm trung bình toàn hệ thống
+     *   - find top 5 video nhiều lượt xem nhất
+     *   - find 50 user mới nhất (không kèm password)
+     *   - aggregate phân bố cấp độ
+     *   - aggregate số lượt làm bài 7 ngày gần nhất
+     *
+     * Tại sao chỉ fetch khi vào tab, không fetch sẵn khi mount?
+     * → Lazy loading: Admin có thể không bao giờ vào tab Thống kê.
+     *   Fetch sẵn sẽ lãng phí 9 query MongoDB không cần thiết.
+     */
+    const fetchStats = async () => {
+        setLoadingStats(true);
+        try {
+            const res = await fetch('/api/admin/stats');
+            if (res.ok) {
+                const data = await res.json();
+                setStats(data);
+            }
+        } finally {
+            setLoadingStats(false);
+        }
+    };
 
     const fetchCollections = async () => {
         setLoadingCols(true);
@@ -254,12 +277,7 @@ export default function AdminPage() {
         }
     };
 
-    /**
-     * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
-     * Hàm này giải quyết vấn đề: video đã có trong DB nhưng thiếu script + segments
-     * (do upload thủ công, không qua bước Whisper).
-     * Fix: Gọi lại Whisper cho file audio đã có → cập nhật DB → bài tập AI hoạt động.
-     */
+    // Gọi lại Whisper cho video đã upload thủ công (thiếu transcript/segments)
     const handleReprocess = async (videoId: string, videoTitle: string) => {
         if (!confirm(`Xử lý lại Whisper cho "${videoTitle}"?\nWhisper sẽ đọc file audio và tạo transcript + timestamp.\nMất khoảng 10-30 giây.`)) return;
         setReprocessingId(videoId);
@@ -349,6 +367,7 @@ export default function AdminPage() {
                         { key: 'upload', label: '📤 Upload bài mới' },
                         { key: 'manage', label: `📋 Bài học (${videos.length})` },
                         { key: 'collections', label: '📚 Bộ sưu tập' },
+                        { key: 'stats', label: '📊 Thống kê' },
                     ].map(t => (
                         <button
                             key={t.key}
@@ -692,6 +711,162 @@ export default function AdminPage() {
                                 ))
                             )}
                         </div>
+                    </div>
+                )}
+
+                {/* Tab Thống kê — dữ liệu từ /api/admin/stats, filter user client-side để tránh round-trip */}
+                {tab === 'stats' && (
+                    <div className="space-y-6">
+                        {loadingStats ? (
+                            <div className="text-center py-20">
+                                <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                <p className="text-slate-500">Đang tải thống kê...</p>
+                            </div>
+                        ) : !stats ? (
+                            <div className="text-center py-20 text-slate-500">Không thể tải dữ liệu thống kê.</div>
+                        ) : (
+                            <>
+                                {/* Overview Cards — 4 chỉ số tổng quan, lấy từ stats.overview */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {[
+                                        { label: 'Học viên', value: stats.overview.totalUsers, icon: '👤', color: 'blue' },
+                                        { label: 'Bài học', value: stats.overview.totalVideos, icon: '🎵', color: 'violet' },
+                                        { label: 'Lượt làm bài', value: stats.overview.totalProgress, icon: '📝', color: 'green' },
+                                        { label: 'Điểm TB', value: `${stats.overview.avgScore} điểm`, icon: '⭐', color: 'amber' },
+                                    ].map((card) => (
+                                        <div key={card.label} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors">
+                                            <p className="text-2xl mb-2">{card.icon}</p>
+                                            <p className="text-3xl font-black text-white">{card.value}</p>
+                                            <p className="text-slate-500 text-sm mt-1">{card.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Top Videos + Level Stats */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Top 5 video */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                        <h3 className="text-white font-bold mb-4 flex items-center gap-2">🏆 Top video lượt xem</h3>
+                                        <div className="space-y-3">
+                                            {stats.topVideos.map((v: any, i: number) => (
+                                                <div key={v._id} className="flex items-center gap-3">
+                                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                                                        i === 0 ? 'bg-amber-500 text-black' :
+                                                        i === 1 ? 'bg-slate-400 text-black' :
+                                                        i === 2 ? 'bg-orange-700 text-white' :
+                                                        'bg-slate-800 text-slate-400'
+                                                    }`}>{i + 1}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white text-sm font-semibold truncate">{v.title}</p>
+                                                        <p className="text-slate-500 text-xs">{v.level}</p>
+                                                    </div>
+                                                    <span className="text-slate-400 text-sm font-bold flex-shrink-0">{v.viewCount} lượt</span>
+                                                </div>
+                                            ))}
+                                            {stats.topVideos.length === 0 && (
+                                                <p className="text-slate-500 text-sm text-center py-4">Chưa có dữ liệu</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Phân bố cấp độ */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                        <h3 className="text-white font-bold mb-4 flex items-center gap-2">📊 Phân bố cấp độ</h3>
+                                        <div className="space-y-4">
+                                            {stats.levelStats.map((ls: any) => {
+                                                const color = ls._id === 'Beginner' ? 'bg-green-500' : ls._id === 'Advanced' ? 'bg-red-500' : 'bg-blue-500';
+                                                const pct = stats.overview.totalVideos > 0 ? Math.round((ls.count / stats.overview.totalVideos) * 100) : 0;
+                                                return (
+                                                    <div key={ls._id}>
+                                                        <div className="flex justify-between text-sm mb-1.5">
+                                                            <span className="text-slate-300 font-semibold">{ls._id}</span>
+                                                            <span className="text-slate-400">{ls.count} bài ({pct}%)</span>
+                                                        </div>
+                                                        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                            <div className={`h-full ${color} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {stats.levelStats.length === 0 && (
+                                                <p className="text-slate-500 text-sm text-center py-4">Chưa có dữ liệu</p>
+                                            )}
+                                        </div>
+
+                                        {/* Câu hỏi AI */}
+                                        <div className="mt-5 pt-5 border-t border-slate-800">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-slate-400 text-sm">🤖 Câu hỏi AI đã sinh</span>
+                                                <span className="text-white font-bold">{stats.overview.totalQuestions} câu</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Bảng danh sách người dùng */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-white font-bold flex items-center gap-2">👥 Danh sách học viên</h3>
+                                        <span className="text-slate-500 text-sm">{stats.recentUsers.length} người dùng gần nhất</span>
+                                    </div>
+
+                                    {/* Tìm kiếm */}
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm theo tên hoặc email..."
+                                        value={userSearch}
+                                        onChange={e => setUserSearch(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 mb-4 transition-colors"
+                                    />
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-slate-800">
+                                                    <th className="text-left text-slate-500 font-semibold pb-3 pr-4">#</th>
+                                                    <th className="text-left text-slate-500 font-semibold pb-3 pr-4">Tên</th>
+                                                    <th className="text-left text-slate-500 font-semibold pb-3 pr-4">Email</th>
+                                                    <th className="text-left text-slate-500 font-semibold pb-3">Ngày tham gia</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800/50">
+                                                {stats.recentUsers
+                                                    .filter((u: any) =>
+                                                        !userSearch ||
+                                                        u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+                                                        u.email?.toLowerCase().includes(userSearch.toLowerCase())
+                                                    )
+                                                    .map((u: any, idx: number) => (
+                                                        <tr key={u._id} className="hover:bg-slate-800/40 transition-colors">
+                                                            <td className="py-3 pr-4 text-slate-600 font-mono">{idx + 1}</td>
+                                                            <td className="py-3 pr-4">
+                                                                <div className="flex items-center gap-2.5">
+                                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                                                        {u.name?.[0]?.toUpperCase() || '?'}
+                                                                    </div>
+                                                                    <span className="text-white font-medium">{u.name}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-3 pr-4 text-slate-400">{u.email}</td>
+                                                            <td className="py-3 text-slate-500">
+                                                                {new Date(u.createdAt).toLocaleDateString('vi-VN')}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                }
+                                            </tbody>
+                                        </table>
+                                        {stats.recentUsers.filter((u: any) =>
+                                            !userSearch ||
+                                            u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+                                            u.email?.toLowerCase().includes(userSearch.toLowerCase())
+                                        ).length === 0 && (
+                                            <p className="text-center text-slate-500 py-8">Không tìm thấy người dùng nào</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

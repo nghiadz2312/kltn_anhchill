@@ -1,20 +1,6 @@
 import mongoose from "mongoose";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * Collection (Bộ sưu tập) là nhóm các video cùng chủ đề.
- * Ví dụ: "Hội thoại hàng ngày", "Business English", "IELTS Speaking"
- *
- * Quan hệ nhiều-nhiều (Many-to-Many):
- * - 1 Collection có nhiều Video
- * - 1 Video có thể thuộc nhiều Collection
- *
- * Cách implement trong MongoDB:
- * → Lưu mảng videoIds trong Collection (embedding references)
- * → Đây là cách phổ biến hơn bảng trung gian của SQL,
- *   phù hợp với đặc trưng document-based của MongoDB.
- */
+// Quan hệ nhiều-nhiều với Video: lưu mảng videoIds trong Collection (embedding references, cách làm chuẩn MongoDB)
 const collectionSchema = new mongoose.Schema(
     {
         name: {

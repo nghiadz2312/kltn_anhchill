@@ -6,15 +6,7 @@ import { fetchFileFromUrl } from "@/lib/cloudinary";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * API re-process được cập nhật để chạy trên Vercel:
- * 1. Không phụ thuộc vào filesystem (fs) khi chạy production.
- * 2. Tự động nhận diện URL:
- *    - Nếu là Cloudinary (https://): Fetch file từ Cloudinary về buffer.
- *    - Nếu là local (/uploads/): Đọc file từ disk (chỉ dùng khi test local).
- * 3. Truyền Buffer vào Whisper AI: Fix lỗi build TypeScript (string vs Buffer).
- */
+// Gọi lại Whisper cho video đã tồn tại — fetch audio từ Cloudinary URL về buffer rồi transcribe lại
 export async function POST(req: Request) {
     try {
         await dbConnect();

@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-/**
- * 
- *  (Bộ lọc trung gian)
- * → Middleware là lớp "bảo vệ" chạy TRƯỚC KHI request đến được route handler (API hoặc Page).
- *   Mọi request đến server (khớp với matcher) đều đi qua middleware trước.
- * 
- * Tại sao cần Middleware thay vì kiểm tra trong từng page/API?
- * → Nếu kiểm tra thủ công ở từng trang hoặc API, lỡ quên 1 nơi sẽ tạo ra lỗ hổng bảo mật.
- *   Middleware tập trung logic bảo vệ ở 1 nơi duy nhất → an toàn, không bỏ sót.
- *   Đây là nguyên tắc DRY (Don't Repeat Yourself) trong kỹ nghệ phần mềm.
- * 
- * Luồng hoạt động:
- * 1. User gửi request truy cập trang/API (ví dụ: /admin)
- * 2. Middleware bắt request → Đọc JWT token từ cookie `engchill-token`.
- * 3. Nếu không có token:
- *    - Nếu là trang bảo mật hoặc admin: Redirect về trang `/login`.
- * 4. Nếu có token:
- *    - Giải mã token bằng JWT_SECRET để lấy payload (userId, role, name, email).
- *    - Nếu truy cập trang admin (`/admin` hoặc `/api/admin`) mà role KHÔNG PHẢI "admin" → Redirect về trang chủ `/`.
- *    - Đính kèm thông tin user (id, role, name) vào request headers để các API phía sau sử dụng ngay mà không cần giải mã lại.
- */
+// Chạy trước mọi request — xác thực JWT, phân quyền, inject user info vào header cho các API sau dùng
 
 export async function middleware(request: NextRequest) {
     const JWT_SECRET = new TextEncoder().encode(
@@ -31,22 +11,17 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get("engchill-token")?.value;
 
-    // ─── TRƯỜNG HỢP 1: Route cần đăng nhập (bất kỳ role nào) ───
+    // Phân loại route để xử lý khác nhau
     const protectedRoutes = ["/profile", "/my-courses"];
     const isProtectedRoute = protectedRoutes.some((route) =>
         pathname.startsWith(route)
     );
-
-    // ─── TRƯỜNG HỢP 2: Route chỉ dành cho Admin ───
     const isAdminRoute = pathname.startsWith("/admin") ||
         pathname.startsWith("/api/admin");
-
-    // ─── TRƯỜNG HỢP 3: Route chỉ dành cho người CHƯA đăng nhập ───
-    // (Đã đăng nhập rồi thì không cần vào trang login/register nữa)
+    // /login và /register: nếu đã đăng nhập thì redirect về trang chủ
     const isAuthRoute = pathname.startsWith("/login") ||
         pathname.startsWith("/register");
 
-    // Không có token
     if (!token) {
         if (isProtectedRoute || isAdminRoute) {
             // Redirect về trang login, kèm theo URL gốc để sau login quay lại
@@ -71,14 +46,11 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL("/", request.url));
         }
 
-        /**
-         * Đính kèm thông tin user vào request header để các API xử lý phía sau lấy được ngay.
-         * Tên user tiếng Việt có dấu (Unicode) không thể đưa trực tiếp vào HTTP Header,
-         * phải dùng encodeURIComponent() để mã hóa thành dạng ASCII.
-         */
+        // Inject user info vào header để các API sau dùng mà không cần query DB lại
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set("x-user-id", String(payload.userId));
         requestHeaders.set("x-user-role", String(payload.role));
+        // encodeURIComponent vì tên tiếng Việt có dấu không đưa thẳng vào HTTP header được
         requestHeaders.set("x-user-name", encodeURIComponent(String(payload.name)));
 
         return NextResponse.next({ request: { headers: requestHeaders } });

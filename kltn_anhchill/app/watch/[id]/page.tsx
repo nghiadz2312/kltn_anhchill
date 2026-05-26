@@ -20,25 +20,8 @@ interface Video {
     viewCount: number;
 }
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * Trang Watch là trung tâm của EngChill. Tính năng chính:
- *
- * 1. AUDIO-TEXT SYNCHRONIZATION (Đồng bộ audio-văn bản)
- *    → Kỹ thuật: lắng nghe sự kiện "timeupdate" của thẻ <audio>
- *      Mỗi ~250ms, audio element phát ra event này kèm currentTime (giây hiện tại).
- *      Ta duyệt mảng segments[] để tìm câu nào có start <= currentTime <= end
- *      → Đó là câu đang được đọc → highlight nó.
- *
- * 2. AUTO-SCROLL (Cuộn tự động)
- *    → Khi câu highlight thay đổi, tự động cuộn transcript để câu đó luôn hiện trên màn hình.
- *    → Dùng ref để lấy DOM element của câu hiện tại → gọi scrollIntoView()
- *
- * 3. CLICK-TO-SEEK (Nhấn câu → nhảy đến đó)
- *    → Khi người dùng click vào câu bất kỳ,
- *      audio.currentTime = segment.start → audio nhảy đến đúng thời điểm đó.
- */
+// Trang xem bài học: audio + transcript đồng bộ theo timestamp từ Whisper segments[]
+// highlight câu đang phát, auto-scroll, click câu để seek đến đúng thời điểm
 export default function WatchPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const [video, setVideo] = useState<Video | null>(null);
@@ -61,12 +44,8 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
             .catch(() => setLoading(false));
     }, [id]);
 
-    /**
-     * XỬ LÝ AUDIO TIME UPDATE — Trái tim của tính năng highlight
-     *
-     * Hàm này chạy mỗi ~250ms khi audio đang phát.
-     * useCallback để tránh tạo lại hàm mỗi lần render → tối ưu performance.
-     */
+    // Chạy mỗi ~250ms khi audio phát — tìm segment khớp currentTime rồi highlight + scroll
+    // useCallback tránh tạo lại hàm mỗi render
     const handleTimeUpdate = useCallback(() => {
         if (!audioRef.current || !video?.segments?.length) return;
 

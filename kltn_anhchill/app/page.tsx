@@ -12,6 +12,15 @@ interface Video {
     createdAt: string;
 }
 
+interface LeaderboardEntry {
+    _id: string;
+    name: string;
+    avatar: string;
+    avgScore: number;
+    totalAttempts: number;
+    bestScore: number;
+}
+
 export const dynamic = 'force-dynamic';
 
 export default function HomePage() {
@@ -21,14 +30,38 @@ export default function HomePage() {
     const [search, setSearch] = useState('');
     const [filterLevel, setFilterLevel] = useState('');
 
+    /**
+     * 🏆 LEADERBOARD STATE
+     *
+     * leaderboard: danh sách top 10 học viên xếp theo điểm trung bình giảm dần.
+     * Dữ liệu được tính từ MongoDB Aggregation Pipeline trong /api/leaderboard.
+     *
+     * Tại sao đặt ở trang chủ (public, không cần đăng nhập)?
+     * → Khách chưa đăng ký cũng thấy bảng xếp hạng, tạo động lực đăng ký để được góp mặt.
+     * Đây là kỹ thuật gamification — dùng sự cạnh tranh để tăng retention.
+     */
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [loadingRank, setLoadingRank] = useState(true);
+
     useEffect(() => {
-        fetch('/api/videos', { cache: 'no-store' })
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) setVideos(data);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
+        /**
+         * 💡 Tại sao dùng Promise.all thay vì 2 fetch riêng lế?
+         * → Promise.all chạy 2 request SONG SONG (cùng lúc).
+         *   Nếu tách ra, request thứ 2 phải chờ request thứ 1 xong mới chạy.
+         *   Song song giúp trang tải nhanh hơn ~50% so với tuần tự.
+         *
+         * → finally() đảm bảo loading luôn được tắt dù có lỗi xảy ra.
+         */
+        Promise.all([
+            fetch('/api/videos', { cache: 'no-store' }).then(r => r.json()),
+            fetch('/api/leaderboard', { cache: 'no-store' }).then(r => r.json()),
+        ]).then(([videoData, rankData]) => {
+            if (Array.isArray(videoData)) setVideos(videoData);
+            if (Array.isArray(rankData)) setLeaderboard(rankData);
+        }).finally(() => {
+            setLoading(false);
+            setLoadingRank(false);
+        });
     }, []);
 
     // Lọc + tìm kiếm ở client-side
@@ -108,6 +141,89 @@ export default function HomePage() {
                         </div>
                     ))}
                 </div>
+            </section>
+
+            {/* Leaderboard — top 10 theo avgScore, tính realtime từ MongoDB aggregate (không cache) */}
+            <section className="max-w-6xl mx-auto px-6 py-10">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                            🏆 Bảng xếp hạng
+                        </h2>
+                        <p className="text-slate-500 text-sm mt-1">Top học viên điểm trung bình cao nhất</p>
+                    </div>
+                </div>
+
+                {/* Skeleton loading — hiển thị khi đang fetch leaderboard */}
+                {loadingRank ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[1,2,3,4].map(i => (
+                            <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 animate-pulse flex items-center gap-4">
+                                <div className="w-10 h-10 bg-slate-800 rounded-full"></div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-slate-800 rounded w-1/3"></div>
+                                    <div className="h-3 bg-slate-800 rounded w-1/4"></div>
+                                </div>
+                                <div className="w-12 h-6 bg-slate-800 rounded"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : leaderboard.length === 0 ? (
+                    <div className="text-center py-10 bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl">
+                        <p className="text-4xl mb-3">🎯</p>
+                        <p className="text-slate-500">Chưa có học viên nào làm bài. Hãy là người đầu tiên!</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {leaderboard.map((entry, idx) => {
+                            const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+                            const isTop3 = idx < 3;
+                            const scoreColor = entry.avgScore >= 8 ? 'text-green-400' : entry.avgScore >= 6 ? 'text-blue-400' : 'text-amber-400';
+
+                            return (
+                                <div
+                                    key={entry._id}
+                                    className={`flex items-center gap-4 rounded-2xl p-4 transition-all border ${
+                                        isTop3
+                                            ? 'bg-gradient-to-r from-slate-900 to-slate-800/60 border-slate-700 hover:border-slate-500'
+                                            : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                                    }`}
+                                >
+                                    {/* Rank number / medal */}
+                                    <div className="w-8 text-center flex-shrink-0">
+                                        {medal ? (
+                                            <span className="text-2xl">{medal}</span>
+                                        ) : (
+                                            <span className="text-slate-500 font-mono font-bold text-sm">#{idx + 1}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Avatar */}
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm flex-shrink-0 bg-gradient-to-br ${
+                                        idx === 0 ? 'from-amber-400 to-orange-500' :
+                                        idx === 1 ? 'from-slate-300 to-slate-500' :
+                                        idx === 2 ? 'from-orange-600 to-orange-800' :
+                                        'from-blue-500 to-violet-600'
+                                    }`}>
+                                        {entry.name?.[0]?.toUpperCase() || '?'}
+                                    </div>
+
+                                    {/* Name + attempts */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-white font-bold truncate">{entry.name}</p>
+                                        <p className="text-slate-500 text-xs">{entry.totalAttempts} lượt làm bài</p>
+                                    </div>
+
+                                    {/* Score */}
+                                    <div className="text-right flex-shrink-0">
+                                        <p className={`text-xl font-black ${scoreColor}`}>{entry.avgScore} điểm</p>
+                                        <p className="text-slate-600 text-[10px]">điểm TB</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </section>
 
             {/* ─── VIDEO LIST ─── */}

@@ -5,23 +5,7 @@ import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import { uploadAudioToCloudinary } from "@/lib/cloudinary";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Dự án: KLTN_anhchill - Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562
- *
- * API NÀY CHỈ CHẠY MỘT LẦN để migrate dữ liệu cũ.
- *
- * VẤN ĐỀ:
- * - Các video cũ lưu videoUrl dạng "/ten-file.mp3" (đường dẫn local)
- * - Trên Vercel, các file này không tồn tại → không phát được
- *
- * GIẢI PHÁP:
- * - API này tìm tất cả video có URL local trong MongoDB
- * - Upload file từ /public/ lên Cloudinary
- * - Cập nhật videoUrl trong MongoDB thành Cloudinary URL
- *
- * GỌI API: GET /api/dev/migrate-to-cloudinary
- */
+// Script one-time: tìm video có URL local trong DB, upload lên Cloudinary, cập nhật URL mới
 export async function GET() {
     try {
         await dbConnect();

@@ -4,20 +4,7 @@ import { useAuth } from '@/components/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Dự án: KLTN_anhchill
- * Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562 - Đại học Thăng Long
- * 
- * 1. QUẢN LÝ LỊCH SỬ HỌC TẬP:
- *    - Mỗi lần người dùng hoàn thành bài tập, một bản ghi UserProgress được tạo ra.
- *    - Trang Profile truy vấn các bản ghi này để hiển thị tiến độ.
- * 
- * 2. TÍNH NĂNG XEM LẠI (REVIEW):
- *    - Trước đây: Chỉ có thể làm lại bài mới.
- *    - Hiện tại: Thêm nút "XEM LẠI" (Review). Nút này truyền `attemptId` vào URL.
- *    - Giúp người học có thể xem lại chính xác lỗi sai của mình trong quá khứ mà không bị AI đổi câu hỏi khác.
- */
+// Trang cá nhân: hiển thị lịch sử làm bài từ UserProgress, nút "Xem lại" truyền attemptId vào URL
 
 interface ProgressRecord {
     _id: string;

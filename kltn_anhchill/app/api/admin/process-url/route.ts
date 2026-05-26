@@ -5,24 +5,9 @@ import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import path from "path";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Dự án: KLTN_anhchill - Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562
- *
- * API này xử lý BƯỚC 2 của luồng upload mới:
- * - Nhận Cloudinary URL (đã được browser upload trực tiếp lên Cloudinary)
- * - Fetch file audio từ Cloudinary URL về buffer
- * - Gửi buffer lên Groq Whisper AI để transcribe
- * - Lưu kết quả vào MongoDB
- *
- * TẠI SAO TÁCH THÀNH 2 BƯỚC?
- * - Vercel Hobby giới hạn 10 giây/function
- * - Upload file 10MB: 5-15 giây → chiếm gần hết quota
- * - Groq transcribe: 5-20 giây → cộng lại = timeout!
- * - Giải pháp: browser tự upload lên Cloudinary (bước 1, không qua Vercel)
- *   rồi server chỉ cần transcribe (bước 2, nhanh hơn vì fetch từ CDN URL)
- */
-export const maxDuration = 60;
+// Bước 2/2 của luồng upload: nhận Cloudinary URL → fetch audio → Groq Whisper transcribe → lưu MongoDB
+// Tách 2 bước vì Vercel giới hạn 10s/function — upload qua browser trực tiếp lên Cloudinary để tránh timeout
+export const maxDuration = 60; // cho phép function chạy tối đa 60s (Vercel Pro)
 
 export async function POST(req: Request) {
     try {

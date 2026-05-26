@@ -2,29 +2,13 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * 
- * API Register xử lý yêu cầu tạo tài khoản mới.
- * 
- * Luồng hoạt động:
- * 1. Client gửi POST request với { name, email, password }
- * 2. Server validate dữ liệu đầu vào
- * 3. Kiểm tra email đã tồn tại chưa
- * 4. Tạo User mới → bcrypt tự động hash mật khẩu (nhờ pre-save hook)
- * 5. Trả về thông báo thành công (KHÔNG trả về password)
- * 
- * Tại sao không trả về JWT token ngay sau đăng ký?
- * → Thiết kế này yêu cầu người dùng đăng nhập sau khi đăng ký,
- *   xác nhận họ nhớ mật khẩu vừa tạo.
- */
+// Đăng ký tài khoản — validate, kiểm tra email trùng, tạo user (bcrypt hash qua pre-save hook)
 export async function POST(req: Request) {
     try {
         await dbConnect();
 
         const { name, email, password } = await req.json();
 
-        // --- BƯỚC 1: VALIDATE DỮ LIỆU ---
         if (!name || !email || !password) {
             return NextResponse.json(
                 { error: "Vui lòng điền đầy đủ thông tin" },
@@ -48,13 +32,7 @@ export async function POST(req: Request) {
             );
         }
 
-        // --- BƯỚC 2: KIỂM TRA EMAIL ĐÃ TỒN TẠI ---
-        /**
-         * Tại sao cần bước này?
-         * → Dù MongoDB có unique index trên email, nếu không check trước
-         *   thì MongoDB sẽ throw lỗi 11000 (duplicate key) khó đọc.
-         *   Kiểm tra trước để trả về thông báo lỗi thân thiện.
-         */
+        // Check trước để trả lỗi thân thiện, tránh lỗi duplicate key 11000 từ MongoDB
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return NextResponse.json(
@@ -63,16 +41,8 @@ export async function POST(req: Request) {
             );
         }
 
-        // --- BƯỚC 3: TẠO TÀI KHOẢN MỚI ---
-        /**
-         * User.create() sẽ:
-         * 1. Khởi tạo document mới
-         * 2. Kích hoạt pre-save hook → bcrypt hash password
-         * 3. Lưu vào MongoDB
-         */
+        // User.create() tự kích hoạt pre-save hook → bcrypt hash password trước khi lưu
         const newUser = await User.create({ name, email, password });
-
-        // Trả về response thành công — KHÔNG trả password
         return NextResponse.json(
             {
                 success: true,

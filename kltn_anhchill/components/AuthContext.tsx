@@ -1,22 +1,7 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * 
- * AuthContext là gì?
- * → Context là cơ chế React cho phép chia sẻ dữ liệu (trạng thái đăng nhập)
- *   giữa các component mà không cần truyền props qua từng tầng (prop drilling).
- * 
- * Vấn đề không có Context:
- *   App → Layout → Header (cần biết user)
- *              ↓
- *            Page → Component → Button (cần biết user)
- *   → Phải truyền "user" qua 4-5 tầng component = rất rối!
- * 
- * Với Context:
- *   Bất kỳ component nào cũng gọi useAuth() là lấy được thông tin user ngay.
- */
+// React Context để share trạng thái đăng nhập toàn app — mọi component gọi useAuth() là lấy được user
 
 interface User {
     id: string;

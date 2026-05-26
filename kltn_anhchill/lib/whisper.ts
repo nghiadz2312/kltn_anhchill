@@ -2,31 +2,8 @@ import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Dự án: KLTN_anhchill - Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562
- *
- * Trước đây dùng response_format: "json" → chỉ trả về text thuần.
- * Bây giờ đổi sang "verbose_json" → trả về text + mảng segments[].
- *
- * Mỗi segment có dạng:
- * {
- *   id: 0,
- *   start: 0.0,   ← bắt đầu ở giây thứ 0
- *   end: 3.5,     ← kết thúc ở giây thứ 3.5
- *   text: " Hello, welcome to this lesson."
- * }
- *
- * Tại sao cần timestamp?
- * → Để trang Watch biết "audio đang ở giây thứ 2.3" → tìm segment nào
- *   có start <= 2.3 <= end → highlight đúng câu đó.
- *   Đây là kỹ thuật gọi là "audio-text synchronization".
- *
- * THAY ĐỔI QUAN TRỌNG (Cloudinary Integration):
- * → Hàm transcribeVideo giờ nhận BUFFER thay vì file path.
- * → Điều này cho phép chạy trên Vercel (serverless, không có filesystem).
- * → Buffer được convert thành File object trước khi gửi lên Groq API.
- */
+// Gọi Groq Whisper API để transcribe audio → trả về fullText + segments[] kèm timestamp
+// verbose_json để lấy timestamp từng câu (dùng cho tính năng highlight transcript khi nghe)
 
 export interface Segment {
     id: number;
@@ -54,12 +31,7 @@ export async function transcribeVideo(
     try {
         console.log("🤖 Đang gửi audio lên Groq Whisper AI...");
 
-        // Tạo File object từ buffer để gửi lên Groq API
-        // VẤN ĐỀ TypeScript:
-        //   Buffer<ArrayBufferLike> → không gán được cho BlobPart
-        //   Uint8Array<ArrayBufferLike> → vẫn lỗi (ArrayBufferLike ≠ ArrayBuffer)
-        // GIẢI PHÁP: Tạo một ArrayBuffer HOÀN TOÀN MỚI (kiểu thuần ArrayBuffer)
-        //   → TypeScript chấp nhận vì ArrayBuffer ⊂ BlobPart
+        // Buffer → ArrayBuffer mới hoàn toàn vì TypeScript không chấp nhận Buffer<ArrayBufferLike> làm BlobPart
         const freshArrayBuffer = new ArrayBuffer(audioBuffer.byteLength);
         new Uint8Array(freshArrayBuffer).set(audioBuffer);
         const audioFile = new File([freshArrayBuffer], fileName, {

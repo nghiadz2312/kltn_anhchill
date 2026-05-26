@@ -4,29 +4,8 @@ import { uploadAudioToCloudinary } from "@/lib/cloudinary";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Dự án: KLTN_anhchill - Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562
- *
- * Tăng thời gian chờ lên 60 giây để Server có đủ thời gian xử lý AI (Whisper)
- * đối với các file audio dung lượng lớn.
- */
+// API upload cũ (nhận file trực tiếp) — đã được thay bằng upload-sign + process-url để tránh Vercel timeout
 export const maxDuration = 60;
-
-/**
- * LUỒNG XỬ LÝ MỚI (sau khi tích hợp Cloudinary):
- *
- * 1. Nhận file mp3/wav từ Admin dashboard
- * 2. Convert sang Buffer (không cần lưu vào /public/)
- * 3. Upload Buffer lên Cloudinary → nhận secure_url
- * 4. Gửi Buffer lên Groq Whisper AI → nhận transcript + segments
- * 5. Lưu vào MongoDB với videoUrl = Cloudinary URL
- *
- * TẠI SAO KHÔNG DÙNG FILESYSTEM NỮA?
- * → Vercel là serverless platform, filesystem là READ-ONLY trong production.
- * → Trước đây: lưu vào /public/ → chỉ hoạt động trên localhost.
- * → Bây giờ: Cloudinary lưu file vĩnh viễn, truy cập được từ mọi nơi.
- */
 export async function POST(req: Request) {
     try {
         await dbConnect();

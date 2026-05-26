@@ -3,23 +3,8 @@ import dbConnect from "@/lib/dbConnect";
 import Question from "@/models/Question";
 import UserProgress from "@/models/UserProgress";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * POST /api/exercises/submit
- * Body: { videoId, userId, answers: [{ questionId, userAnswer }] }
- *
- * THUẬT TOÁN CHẤM ĐIỂM:
- *
- * 1. Với câu trắc nghiệm (multiple_choice):
- *    → So sánh index người dùng chọn với correctIndex trong DB
- *
- * 2. Với câu điền từ (fill_blank):
- *    → Normalize cả 2 chuỗi (lowercase, trim, xóa dấu câu)
- *    → So sánh để tránh sai vì chữ hoa/thường hay khoảng trắng thừa
- *
- * Score = (correctCount / totalQuestions) × 100
- */
+// Chấm bài: so sánh đáp án user với đáp án trong DB, tính score = (đúng/tổng) × 100
+// fill_blank được normalize (lowercase, trim, bỏ dấu câu) trước khi so sánh
 export async function POST(req: Request) {
     try {
         await dbConnect();

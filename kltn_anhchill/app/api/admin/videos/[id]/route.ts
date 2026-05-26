@@ -11,13 +11,7 @@ import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback_secret");
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Cập nhật hàm DELETE để hỗ trợ Cloudinary:
- * 1. Nhận diện URL: Nếu là link Cloudinary, gọi API Cloudinary để xóa asset.
- * 2. An toàn trên Vercel: Wrap việc xóa file cục bộ trong try-catch vì 
- *    filesystem trên Vercel là read-only, có thể gây crash nếu không xử lý.
- */
+// Xóa video: nếu URL là Cloudinary thì xóa asset trên cloud, xóa luôn Questions + UserProgress liên quan
 export async function DELETE(
     req: Request,
     { params }: { params: Promise<{ id: string }> }

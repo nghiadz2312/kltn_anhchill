@@ -1,17 +1,6 @@
 import mongoose from "mongoose";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * Tại sao lưu câu hỏi vào DB thay vì sinh lại mỗi lần?
- * → Lý do kinh tế và trải nghiệm:
- *   1. Gọi AI tốn tiền (mỗi lần ~$0.001) → sinh 1 lần, dùng nhiều lần
- *   2. Gọi AI mất 3-5 giây → cache vào DB → load tức thì lần sau
- *   3. Admin có thể chỉnh sửa câu hỏi sai → cần lưu persistent
- *
- * Đây là pattern "Generate Once, Cache Forever" hay còn gọi là
- * "AI-assisted content creation" — AI tạo nội dung, con người review.
- */
+// Câu hỏi AI sinh ra được lưu vào DB để cache — tránh gọi AI lại mỗi lần (tốn tiền + chậm)
 
 const questionSchema = new mongoose.Schema(
     {

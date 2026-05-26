@@ -10,19 +10,8 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const isAdmin = searchParams.get("admin") === "true";
 
-        /**
-         * 📚 GIẢI THÍCH CHO HỘI ĐỒNG (Tối ưu hiệu năng):
-         * 
-         * Trước đây: Admin fetch toàn bộ video kèm cả `segments` + `script` (rất nặng, chậm).
-         * Vấn đề: `segments` là mảng chứa hàng trăm câu với timestamp → dữ liệu khổng lồ.
-         * 
-         * Giải pháp: Dùng MongoDB Aggregation Pipeline:
-         * - $addFields: Tính `segmentCount` = số phần tử trong mảng segments
-         * - $project: Loại bỏ hoàn toàn `segments` và `script` khỏi response
-         * 
-         * Kết quả: Admin chỉ nhận metadata nhẹ + số lượng segments.
-         * Khi cần sửa transcript, frontend gọi riêng /api/admin/videos/[id] để lấy đầy đủ.
-         */
+        // Admin mode: dùng aggregate để tính segmentCount rồi loại bỏ segments+script khỏi response
+        // Giữ payload nhỏ — khi cần sửa transcript mới gọi riêng /api/admin/videos/[id]
         if (isAdmin) {
             const videos = await Video.aggregate([
                 { $sort: { createdAt: -1 } },

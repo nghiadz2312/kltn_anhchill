@@ -2,18 +2,8 @@ import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * Tại sao dùng Groq cho cả Whisper lẫn LLaMA?
- * → Groq cung cấp 2 loại API cực kỳ tối ưu:
- *   1. Audio API (Whisper-large-v3) → Speech-to-text với độ chính xác cao.
- *   2. Chat Completion API (LLaMA 3) → Sinh câu hỏi, bài tập với tốc độ vượt trội.
- *
- * Ưu điểm:
- *   - Sử dụng chip LPU (Language Processing Unit) giúp phản hồi gần như tức thì.
- *   - LLaMA 3 70B/8B là các model mã nguồn mở hàng đầu hiện nay.
- */
+// Groq LLM — sinh câu hỏi trắc nghiệm và điền từ từ transcript
+// Model llama-3.3-70b-versatile, response_format json để parse an toàn
 
 export interface MultipleChoiceQuestion {
     type: "multiple_choice";

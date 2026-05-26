@@ -1,17 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * Dự án: KLTN_anhchill - Tác giả: Nguyễn Giang Tuấn Nghĩa - A46562
- *
- * Cloudinary là dịch vụ lưu trữ file media trên cloud (ảnh, video, audio).
- *
- * TẠI SAO CẦN CLOUDINARY?
- * - Vercel là serverless platform → filesystem là READ-ONLY
- * - Không thể lưu file mp3/mp4 lên /public/ khi deploy
- * - Cloudinary giải quyết: nhận file → lưu trên cloud → trả về URL cố định
- * - URL từ Cloudinary có thể phát trực tiếp trên trình duyệt (CORS OK)
- */
+// Cloudinary — lưu trữ file audio trên cloud vì Vercel filesystem là read-only khi deploy
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -20,14 +9,6 @@ cloudinary.config({
     secure: true, // Đảm bảo luôn dùng HTTPS
 });
 
-/**
- * uploadAudioToCloudinary
- * Upload buffer audio lên Cloudinary, trả về URL công khai.
- *
- * @param buffer - Buffer của file audio
- * @param fileName - Tên file (dùng làm public_id)
- * @returns URL công khai của file trên Cloudinary
- */
 export function uploadAudioToCloudinary(buffer: Buffer, fileName: string): Promise<string> {
     return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -50,12 +31,6 @@ export function uploadAudioToCloudinary(buffer: Buffer, fileName: string): Promi
     });
 }
 
-/**
- * deleteFromCloudinary
- * Xóa một asset khỏi Cloudinary dựa trên URL.
- * 
- * @param url - URL đầy đủ của file trên Cloudinary
- */
 export async function deleteFromCloudinary(url: string) {
     try {
         if (!url || !url.includes("cloudinary.com")) return;
@@ -76,10 +51,6 @@ export async function deleteFromCloudinary(url: string) {
     }
 }
 
-/**
- * fetchFileFromUrl
- * Tải file từ một URL về Buffer (dùng cho re-process bài cũ).
- */
 export async function fetchFileFromUrl(url: string): Promise<Buffer> {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Không thể tải file từ URL: ${url}`);

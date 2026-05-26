@@ -1,21 +1,6 @@
 import mongoose from "mongoose";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- *
- * UserProgress lưu kết quả mỗi lần người dùng làm bài.
- *
- * Tại sao cần model riêng thay vì lưu trong User?
- * → Single Responsibility Principle:
- *   - User model: thông tin tài khoản
- *   - UserProgress model: lịch sử học tập
- *   → Tách ra dễ query thống kê, dễ xóa khi cần, không làm User document phình to
- *
- * Dữ liệu này dùng để:
- *   1. Hiển thị lịch sử làm bài của học viên
- *   2. Tính điểm trung bình theo từng video
- *   3. Gợi ý video phù hợp (feature tương lai)
- */
+// Lưu kết quả mỗi lần làm bài — tách khỏi User để dễ query thống kê và không làm document phình to
 
 const userProgressSchema = new mongoose.Schema(
     {

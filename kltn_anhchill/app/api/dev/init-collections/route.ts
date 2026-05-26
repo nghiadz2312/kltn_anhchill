@@ -3,12 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Collection from "@/models/Collection";
 import Video from "@/models/Video";
 
-/**
- * 📚 GIẢI THÍCH CHO HỘI ĐỒNG:
- * API này dùng để khởi tạo dữ liệu mặc định cho tính năng Bộ sưu tập.
- * 1. Tạo bộ sưu tập "Nhạc" nếu chưa có.
- * 2. Gán tất cả video hiện tại vào bộ sưu tập "Nhạc".
- */
+// Script khởi tạo dữ liệu mặc định — chỉ chạy 1 lần khi setup lần đầu
 export async function GET() {
     try {
         await dbConnect();
