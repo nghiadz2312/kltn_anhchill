@@ -35,7 +35,7 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
     const [mode, setMode] = useState<Mode>('ready');
     const [userInput, setUserInput] = useState('');
     const [wordResults, setWordResults] = useState<WordResult[]>([]);
-    const [scores, setScores] = useState<number[]>([]); 
+    const [scores, setScores] = useState<number[]>([]);
     const [replays, setReplays] = useState(0);
     const [showHint, setShowHint] = useState(false);
     const [segmentProgress, setSegmentProgress] = useState(0);
@@ -125,7 +125,7 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
         }
 
         const score = Math.round((correctCount / originalWords.length) * 100);
-        
+
         setHistory(prev => ({ ...prev, [currentIdx]: { userInput, wordResults: results, score } }));
         setWordResults(results);
         setScores(prev => [...prev, score]);
@@ -177,7 +177,7 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
 
     const segs = video.segments;
     const currentSeg = segs[currentIdx];
-    
+
     // 📘 LOGIC CHẤM ĐIỂM NGHIÊM NGẶT (Strict Scoring)
     // Chỉ đếm những câu đạt 100% độ chính xác
     const correctSentencesCount = Object.values(history).filter(h => h.score === 100).length;
@@ -208,7 +208,7 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
     return (
         <div className="min-h-screen bg-slate-950 py-6 px-4">
             <audio ref={audioRef} src={video.videoUrl} preload="auto" className="hidden" />
-            
+
             <div className="max-w-5xl mx-auto space-y-6">
 
                 {/* THANH CHỈ SỐ TỔNG HỢP */}
@@ -220,14 +220,14 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
                             <p className="text-slate-500 text-[10px] font-bold uppercase">{video.title}</p>
                         </div>
                     </div>
-                    
+
                     <div className="flex gap-8 items-center">
                         <div className="text-center">
                             <p className="text-slate-500 text-[10px] font-black uppercase mb-0.5">Đúng Tuyệt đối</p>
                             <p className="text-green-500 font-black">{correctSentencesCount}/{segs.length}</p>
                         </div>
                         <div className="w-px h-8 bg-slate-800"></div>
-                        <button 
+                        <button
                             onClick={submitEarly}
                             className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                         >
@@ -240,15 +240,14 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
                 <div className="bg-slate-900/50 p-2 rounded-2xl border border-slate-800">
                     <div ref={navRef} className="flex gap-2 overflow-x-auto no-scrollbar justify-start px-2 py-1">
                         {segs.map((_, i) => (
-                            <button 
-                                key={i} 
-                                data-idx={i} 
-                                onClick={() => jumpToSegment(i)} 
-                                className={`w-10 h-10 flex-shrink-0 rounded-xl text-xs font-black transition-all border ${
-                                    i === currentIdx ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] scale-110 z-10' : 
-                                    history[i] ? 'bg-green-500/10 border-green-500/20 text-green-500' : 
-                                    'bg-slate-800 border-slate-700 text-slate-500'
-                                }`}
+                            <button
+                                key={i}
+                                data-idx={i}
+                                onClick={() => jumpToSegment(i)}
+                                className={`w-10 h-10 flex-shrink-0 rounded-xl text-xs font-black transition-all border ${i === currentIdx ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] scale-110 z-10' :
+                                        history[i] ? 'bg-green-500/10 border-green-500/20 text-green-500' :
+                                            'bg-slate-800 border-slate-700 text-slate-500'
+                                    }`}
                             >
                                 {i + 1}
                             </button>
@@ -257,18 +256,18 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    
+
                     {/* Left: Player */}
                     <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 text-center space-y-8 shadow-xl">
                         <div className="relative inline-block mx-auto group">
                             <svg className="w-40 h-40 transform -rotate-90">
                                 <circle cx="80" cy="80" r="75" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-800" />
-                                <circle cx="80" cy="80" r="75" stroke="currentColor" strokeWidth="6" fill="transparent" 
-                                    strokeDasharray={471} strokeDashoffset={471 - (471 * segmentProgress) / 100} 
+                                <circle cx="80" cy="80" r="75" stroke="currentColor" strokeWidth="6" fill="transparent"
+                                    strokeDasharray={471} strokeDashoffset={471 - (471 * segmentProgress) / 100}
                                     className="text-blue-500 transition-all duration-100" />
                             </svg>
-                            <button 
-                                onClick={() => playCurrentSegment(false)} 
+                            <button
+                                onClick={() => playCurrentSegment(false)}
                                 className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-blue-500 text-white text-4xl shadow-2xl hover:scale-105 active:scale-95 transition-all group-hover:bg-blue-400"
                             >
                                 {mode === 'playing' ? '🔊' : '▶️'}
@@ -286,7 +285,7 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
                     {/* Right: Typing Area */}
                     <div className="lg:col-span-8 space-y-6">
                         <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 shadow-xl min-h-[300px] flex flex-col">
-                            
+
                             <div className="relative flex-1 font-mono text-xl tracking-[0.15em] leading-loose">
                                 <div className="absolute inset-0 pointer-events-none opacity-20 select-none whitespace-pre-wrap break-words">
                                     {currentSeg.text.split('').map((char, i) => char === ' ' ? ' ' : '_').join('')}
@@ -304,10 +303,10 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
 
                             <div className="flex items-center justify-between border-t border-slate-800 pt-6">
                                 <button onClick={() => setShowHint(!showHint)} className="text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-blue-500 transition-colors">GỢI Ý (HINT)</button>
-                                
+
                                 {!history[currentIdx] && userInput.trim().length > 0 && (
-                                    <button 
-                                        onClick={checkAnswer} 
+                                    <button
+                                        onClick={checkAnswer}
                                         className="bg-blue-500 text-white font-black px-12 py-4 rounded-2xl text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-400 transition-all animate-in zoom-in-95 duration-200"
                                     >
                                         KIỂM TRA (CHECK) ✓
@@ -330,7 +329,7 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Phân tích kết quả</h4>
                                     <div className="flex items-center gap-3">
-                                        <span className={`text-4xl font-black ${ (history[currentIdx]?.score || 0) === 100 ? 'text-green-500' : 'text-red-500'}`}>
+                                        <span className={`text-4xl font-black ${(history[currentIdx]?.score || 0) === 100 ? 'text-green-500' : 'text-red-500'}`}>
                                             {(history[currentIdx]?.score || 0)}%
                                         </span>
                                         <span className="bg-slate-800 text-[10px] text-slate-400 px-3 py-1.5 rounded-full font-black border border-slate-700 uppercase tracking-tighter">
@@ -341,12 +340,11 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
 
                                 <div className="flex flex-wrap gap-2">
                                     {(history[currentIdx]?.wordResults || wordResults).map((w, i) => (
-                                        <span key={i} className={`px-4 py-2 rounded-xl font-bold text-sm border ${
-                                            w.status === 'correct' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
-                                            w.status === 'wrong'   ? 'bg-red-500/10 text-red-400 border-red-400/20 line-through' : 
-                                            w.status === 'missing' ? 'bg-slate-800 text-slate-500 border-slate-700 italic' : 
-                                            'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                                        }`}>
+                                        <span key={i} className={`px-4 py-2 rounded-xl font-bold text-sm border ${w.status === 'correct' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                                w.status === 'wrong' ? 'bg-red-500/10 text-red-400 border-red-400/20 line-through' :
+                                                    w.status === 'missing' ? 'bg-slate-800 text-slate-500 border-slate-700 italic' :
+                                                        'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                            }`}>
                                             {w.word}
                                         </span>
                                     ))}
@@ -357,8 +355,8 @@ export default function DictationPage({ params }: { params: Promise<{ id: string
                                     <p className="text-green-500 font-bold leading-relaxed text-lg">{currentSeg.text}</p>
                                 </div>
 
-                                <button 
-                                    onClick={nextSegment} 
+                                <button
+                                    onClick={nextSegment}
                                     className="w-full bg-white text-black font-black py-5 rounded-3xl hover:bg-slate-200 transition-all text-sm uppercase tracking-[0.2em] shadow-xl"
                                 >
                                     {currentIdx + 1 >= segs.length ? 'TỔNG KẾT BÀI HỌC' : 'CÂU TIẾP THEO'} <span>→</span>

@@ -134,7 +134,7 @@ export default function AdminPage() {
     const handleDeleteCollection = async (id: string, name: string) => {
         if (!confirm(`Xóa bộ sưu tập "${name}"? Các video trong đó sẽ không bị xóa.`)) return;
         try {
-            const res = await fetch(`/api/collections/${id}`, { 
+            const res = await fetch(`/api/collections/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-user-role': 'admin' }
             });
@@ -205,7 +205,7 @@ export default function AdminPage() {
             addLog(`☁️ Upload Cloudinary thành công!`);
 
             // ── BƯỚC 3: Gửi URL lên server để AI transcribe ──
-            addLog('🤖 Groq Whisper AI đang transcribe audio...');
+            addLog(' Groq Whisper AI đang transcribe audio...');
             addLog('⏳ Bước này mất 10-20 giây...');
 
             const processRes = await fetch('/api/admin/process-url', {
@@ -310,7 +310,7 @@ export default function AdminPage() {
             });
             if (res.ok) {
                 toast.success('Đã cập nhật bộ sưu tập');
-                setVideos(prev => prev.map(v => 
+                setVideos(prev => prev.map(v =>
                     v._id === videoId ? { ...v, collections: [collectionId] } : v
                 ));
             } else {
@@ -372,11 +372,10 @@ export default function AdminPage() {
                         <button
                             key={t.key}
                             onClick={() => setTab(t.key as any)}
-                            className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                                tab === t.key
+                            className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${tab === t.key
                                     ? 'bg-blue-500 text-white shadow-lg'
                                     : 'text-slate-400 hover:text-white'
-                            }`}
+                                }`}
                         >
                             {t.label}
                         </button>
@@ -442,11 +441,10 @@ export default function AdminPage() {
                                 {/* File Upload */}
                                 <div>
                                     <label className="block text-slate-400 text-sm mb-2">File Audio/Video *</label>
-                                    <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
-                                        file
+                                    <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${file
                                             ? 'border-blue-500 bg-blue-500/10'
                                             : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
-                                    }`}>
+                                        }`}>
                                         <input
                                             type="file"
                                             accept="audio/mp3,audio/mpeg,video/mp4,audio/wav,audio/m4a"
@@ -535,11 +533,10 @@ export default function AdminPage() {
                                 <div key={v._id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex items-center gap-4">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                                                v.level === 'Beginner' ? 'bg-green-500/20 text-green-400' :
-                                                v.level === 'Advanced' ? 'bg-red-500/20 text-red-400' :
-                                                'bg-blue-500/20 text-blue-400'
-                                            }`}>{v.level}</span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${v.level === 'Beginner' ? 'bg-green-500/20 text-green-400' :
+                                                    v.level === 'Advanced' ? 'bg-red-500/20 text-red-400' :
+                                                        'bg-blue-500/20 text-blue-400'
+                                                }`}>{v.level}</span>
                                             <span className="text-slate-600 text-xs">{v.viewCount} views</span>
                                             {v.segmentCount && v.segmentCount > 0 ? (
                                                 <span className="text-xs text-green-400">✓ {v.segmentCount} segments</span>
@@ -686,13 +683,12 @@ export default function AdminPage() {
                                 collections.map(c => (
                                     <div key={c._id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex items-center justify-between hover:border-slate-700 transition-colors group">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-3 h-12 rounded-full shadow-lg ${
-                                                c.color === 'blue' ? 'bg-blue-500 shadow-blue-500/20' :
-                                                c.color === 'green' ? 'bg-green-500 shadow-green-500/20' :
-                                                c.color === 'purple' ? 'bg-violet-500 shadow-violet-500/20' :
-                                                c.color === 'orange' ? 'bg-orange-500 shadow-orange-500/20' :
-                                                'bg-red-500 shadow-red-500/20'
-                                            }`}></div>
+                                            <div className={`w-3 h-12 rounded-full shadow-lg ${c.color === 'blue' ? 'bg-blue-500 shadow-blue-500/20' :
+                                                    c.color === 'green' ? 'bg-green-500 shadow-green-500/20' :
+                                                        c.color === 'purple' ? 'bg-violet-500 shadow-violet-500/20' :
+                                                            c.color === 'orange' ? 'bg-orange-500 shadow-orange-500/20' :
+                                                                'bg-red-500 shadow-red-500/20'
+                                                }`}></div>
                                             <div>
                                                 <h3 className="text-white font-bold group-hover:text-blue-400 transition-colors">{c.name}</h3>
                                                 <p className="text-slate-500 text-[10px] uppercase tracking-wider font-bold mt-0.5">
@@ -750,12 +746,11 @@ export default function AdminPage() {
                                         <div className="space-y-3">
                                             {stats.topVideos.map((v: any, i: number) => (
                                                 <div key={v._id} className="flex items-center gap-3">
-                                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                                                        i === 0 ? 'bg-amber-500 text-black' :
-                                                        i === 1 ? 'bg-slate-400 text-black' :
-                                                        i === 2 ? 'bg-orange-700 text-white' :
-                                                        'bg-slate-800 text-slate-400'
-                                                    }`}>{i + 1}</span>
+                                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${i === 0 ? 'bg-amber-500 text-black' :
+                                                            i === 1 ? 'bg-slate-400 text-black' :
+                                                                i === 2 ? 'bg-orange-700 text-white' :
+                                                                    'bg-slate-800 text-slate-400'
+                                                        }`}>{i + 1}</span>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-white text-sm font-semibold truncate">{v.title}</p>
                                                         <p className="text-slate-500 text-xs">{v.level}</p>
@@ -861,8 +856,8 @@ export default function AdminPage() {
                                             u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
                                             u.email?.toLowerCase().includes(userSearch.toLowerCase())
                                         ).length === 0 && (
-                                            <p className="text-center text-slate-500 py-8">Không tìm thấy người dùng nào</p>
-                                        )}
+                                                <p className="text-center text-slate-500 py-8">Không tìm thấy người dùng nào</p>
+                                            )}
                                     </div>
                                 </div>
                             </>
@@ -880,7 +875,7 @@ export default function AdminPage() {
                                 <h2 className="text-white font-bold text-xl">✎ Sửa Transcript</h2>
                                 <p className="text-slate-500 text-sm truncate max-w-[400px]">{editingVideo.title}</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setEditingVideo(null)}
                                 className="text-slate-400 hover:text-white w-8 h-8 rounded-full hover:bg-slate-800 transition-colors"
                             >

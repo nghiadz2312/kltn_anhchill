@@ -89,7 +89,7 @@ export default function HomePage() {
 
                 <div className="relative max-w-4xl mx-auto text-center">
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium px-4 py-2 rounded-full mb-6">
-                        🤖 Powered by Whisper AI + Groq
+                        Powered by Whisper AI + Groq
                     </div>
                     <h1 className="text-5xl md:text-6xl font-black text-white mb-4 leading-tight">
                         Học tiếng Anh<br />
@@ -157,7 +157,7 @@ export default function HomePage() {
                 {/* Skeleton loading — hiển thị khi đang fetch leaderboard */}
                 {loadingRank ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {[1,2,3,4].map(i => (
+                        {[1, 2, 3, 4].map(i => (
                             <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 animate-pulse flex items-center gap-4">
                                 <div className="w-10 h-10 bg-slate-800 rounded-full"></div>
                                 <div className="flex-1 space-y-2">
@@ -183,11 +183,10 @@ export default function HomePage() {
                             return (
                                 <div
                                     key={entry._id}
-                                    className={`flex items-center gap-4 rounded-2xl p-4 transition-all border ${
-                                        isTop3
+                                    className={`flex items-center gap-4 rounded-2xl p-4 transition-all border ${isTop3
                                             ? 'bg-gradient-to-r from-slate-900 to-slate-800/60 border-slate-700 hover:border-slate-500'
                                             : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-                                    }`}
+                                        }`}
                                 >
                                     {/* Rank number / medal */}
                                     <div className="w-8 text-center flex-shrink-0">
@@ -199,12 +198,11 @@ export default function HomePage() {
                                     </div>
 
                                     {/* Avatar */}
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm flex-shrink-0 bg-gradient-to-br ${
-                                        idx === 0 ? 'from-amber-400 to-orange-500' :
-                                        idx === 1 ? 'from-slate-300 to-slate-500' :
-                                        idx === 2 ? 'from-orange-600 to-orange-800' :
-                                        'from-blue-500 to-violet-600'
-                                    }`}>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm flex-shrink-0 bg-gradient-to-br ${idx === 0 ? 'from-amber-400 to-orange-500' :
+                                            idx === 1 ? 'from-slate-300 to-slate-500' :
+                                                idx === 2 ? 'from-orange-600 to-orange-800' :
+                                                    'from-blue-500 to-violet-600'
+                                        }`}>
                                         {entry.name?.[0]?.toUpperCase() || '?'}
                                     </div>
 

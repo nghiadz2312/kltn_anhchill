@@ -30,31 +30,23 @@ export async function GET(req: NextRequest) {
         if (!progress) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
         // Format lại dữ liệu giống như cấu trúc trang Exercise cần
-        const results = progress.answers.map((ans: any) => {
-            const q = ans.questionId;
-            // 📘 KIỂM TRA NULL: Nếu câu hỏi gốc đã bị xóa khỏi DB
-            if (!q) {
+        // Câu hỏi bị null (đã xóa khỏi DB) → bỏ qua, không trả về frontend
+        const results = progress.answers
+            .map((ans: any) => {
+                const q = ans.questionId;
+                if (!q) return null;
                 return {
-                    questionId: ans._id,
+                    questionId: q._id,
                     isCorrect: ans.isCorrect,
                     userAnswer: ans.userAnswer,
-                    correctAnswer: "Dữ liệu câu hỏi gốc không còn",
-                    explanation: "",
-                    questionText: "Câu hỏi này đã bị xóa khỏi hệ thống",
-                    type: "unknown"
+                    correctAnswer: q.type === 'multiple_choice' ? (q.options[q.correctIndex] || "N/A") : q.answer,
+                    explanation: q.explanation,
+                    questionText: q.type === 'multiple_choice' ? q.question : q.blankedSentence,
+                    type: q.type,
+                    options: q.options,
                 };
-            }
-            return {
-                questionId: q._id,
-                isCorrect: ans.isCorrect,
-                userAnswer: ans.userAnswer,
-                correctAnswer: q.type === 'multiple_choice' ? (q.options[q.correctIndex] || "N/A") : q.answer,
-                explanation: q.explanation,
-                questionText: q.type === 'multiple_choice' ? q.question : q.blankedSentence,
-                type: q.type,
-                options: q.options 
-            };
-        });
+            })
+            .filter(Boolean);
 
         return NextResponse.json({
             score: progress.score,
