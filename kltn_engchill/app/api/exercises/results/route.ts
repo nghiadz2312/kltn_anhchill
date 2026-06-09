@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from "next/server";
+import dbConnect from "@/lib/dbConnect";
+import UserProgress from "@/models/UserProgress";
+import Question from "@/models/Question";
+import Video from "@/models/Video";
+import User from "@/models/User";
+import Collection from "@/models/Collection";
+
+export const dynamic = "force-dynamic";
+
+// 🔑 Buộc Next.js bundler giữ lại tất cả model imports (ngăn tree-shaking).
+// Mongoose resolve quan hệ populate() qua string — bundler không tự phát hiện được.
+void { UserProgress, Question, Video, User, Collection };
+
+// Lấy chi tiết bài làm cũ để "Xem lại" — populate câu hỏi gốc từ Question model
+
+export async function GET(req: NextRequest) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(req.url);
+        const attemptId = searchParams.get("attemptId");
+
+        if (!attemptId) return NextResponse.json({ error: "Missing attemptId" }, { status: 400 });
+
+        // Lấy record tiến độ và populate thông tin video + câu hỏi
+        const progress = await UserProgress.findById(attemptId)
+            .populate("videoId", "title")
+            .populate("answers.questionId");
+
+        if (!progress) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+        // Format lại dữ liệu giống như cấu trúc trang Exercise cần
+        // Câu hỏi bị null (đã xóa khỏi DB) → bỏ qua, không trả về frontend
+        const results = progress.answers
+            .map((ans: any) => {
+                const q = ans.questionId;
+                if (!q) return null;
+                return {
+                    questionId: q._id,
+                    isCorrect: ans.isCorrect,
+                    userAnswer: ans.userAnswer,
+                    correctAnswer: q.type === 'multiple_choice' ? (q.options[q.correctIndex] || "N/A") : q.answer,
+                    explanation: q.explanation,
+                    questionText: q.type === 'multiple_choice' ? q.question : q.blankedSentence,
+                    type: q.type,
+                    options: q.options,
+                };
+            })
+            .filter(Boolean);
+
+        return NextResponse.json({
+            score: progress.score,
+            results: results,
+            questions: progress.answers.map((ans: any) => ans.questionId).filter(Boolean), 
+            videoTitle: progress.videoId?.title,
+            feedback: progress.score >= 80 ? "Xuất sắc!" : progress.score >= 50 ? "Khá tốt!" : "Cần cố gắng thêm!"
+        });
+
+    } catch (error) {
+        console.error("LỖI API RESULTS:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
+}

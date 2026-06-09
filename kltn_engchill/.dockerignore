@@ -1,0 +1,22 @@
+# Dependencies (sẽ được cài lại trong container)
+node_modules
+npm-debug.log*
+
+# Next.js build output (sẽ được build lại trong container)
+.next
+out
+
+# Env files — KHÔNG BAO GIỜ đưa vào Docker image
+# Truyền qua biến môi trường khi chạy container
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Docs & config không cần thiết khi chạy
+README.md
+Dockerfile
+.dockerignore
