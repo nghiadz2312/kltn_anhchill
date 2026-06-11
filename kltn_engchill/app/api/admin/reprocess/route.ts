@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import fs from "fs";
 import path from "path";
 import { transcribeVideo } from "@/lib/whisper";
@@ -8,6 +9,12 @@ import Video from "@/models/Video";
 
 // Gọi lại Whisper cho video đã tồn tại — fetch audio từ Cloudinary URL về buffer rồi transcribe lại
 export async function POST(req: Request) {
+    const headersList = await headers();
+    const role = headersList.get("x-user-role");
+    if (role !== "admin") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     try {
         await dbConnect();
         const { videoId } = await req.json();
