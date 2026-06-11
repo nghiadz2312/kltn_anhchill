@@ -29,6 +29,9 @@ export default function HomePage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterLevel, setFilterLevel] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalVideos, setTotalVideos] = useState(0);
 
     /**
      * 🏆 LEADERBOARD STATE
@@ -43,33 +46,69 @@ export default function HomePage() {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [loadingRank, setLoadingRank] = useState(true);
 
+    // Fetch leaderboard once on mount
     useEffect(() => {
-        /**
-         * 💡 Tại sao dùng Promise.all thay vì 2 fetch riêng lế?
-         * → Promise.all chạy 2 request SONG SONG (cùng lúc).
-         *   Nếu tách ra, request thứ 2 phải chờ request thứ 1 xong mới chạy.
-         *   Song song giúp trang tải nhanh hơn ~50% so với tuần tự.
-         *
-         * → finally() đảm bảo loading luôn được tắt dù có lỗi xảy ra.
-         */
-        Promise.all([
-            fetch('/api/videos', { cache: 'no-store' }).then(r => r.json()),
-            fetch('/api/leaderboard', { cache: 'no-store' }).then(r => r.json()),
-        ]).then(([videoData, rankData]) => {
-            if (Array.isArray(videoData)) setVideos(videoData);
-            if (Array.isArray(rankData)) setLeaderboard(rankData);
-        }).finally(() => {
-            setLoading(false);
-            setLoadingRank(false);
-        });
+        fetch('/api/leaderboard', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(rankData => {
+                if (Array.isArray(rankData)) setLeaderboard(rankData);
+            })
+            .catch(err => console.error("Lỗi fetch leaderboard:", err))
+            .finally(() => setLoadingRank(false));
     }, []);
 
-    // Lọc + tìm kiếm ở client-side
-    const filtered = videos.filter(v => {
-        const matchSearch = v.title.toLowerCase().includes(search.toLowerCase());
-        const matchLevel = filterLevel ? v.level === filterLevel : true;
-        return matchSearch && matchLevel;
-    });
+    // Fetch videos with server-side pagination, search, and level filter
+    useEffect(() => {
+        setLoading(true);
+        const delayDebounceFn = setTimeout(() => {
+            const url = `/api/videos?page=${page}&limit=9&search=${encodeURIComponent(search)}&level=${filterLevel}`;
+            fetch(url, { cache: 'no-store' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && Array.isArray(data.videos)) {
+                        setVideos(data.videos);
+                        setTotalPages(data.totalPages || 1);
+                        setTotalVideos(data.total || 0);
+                    } else if (Array.isArray(data)) {
+                        // Fallback
+                        setVideos(data);
+                        setTotalPages(1);
+                        setTotalVideos(data.length);
+                    }
+                })
+                .catch(err => console.error("Lỗi fetch videos:", err))
+                .finally(() => setLoading(false));
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [page, search, filterLevel]);
+
+    const handleSearchChange = (val: string) => {
+        setSearch(val);
+        setPage(1);
+    };
+
+    const handleLevelChange = (val: string) => {
+        setFilterLevel(val);
+        setPage(1);
+    };
+
+    const getPageNumbers = () => {
+        const pages: (number | string)[] = [];
+        const maxVisible = 5;
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            if (page <= 3) {
+                pages.push(1, 2, 3, 4, '...', totalPages);
+            } else if (page >= totalPages - 2) {
+                pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+            } else {
+                pages.push(1, '...', page - 1, page, page + 1, '...', totalPages);
+            }
+        }
+        return pages;
+    };
 
     const levelColors: Record<string, string> = {
         Beginner: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -228,7 +267,7 @@ export default function HomePage() {
             <section className="max-w-6xl mx-auto px-6 py-12">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <h2 className="text-2xl font-black text-white">
-                        📚 Bài học ({filtered.length})
+                        📚 Bài học ({totalVideos})
                     </h2>
 
                     {/* Search + Filter */}
@@ -237,12 +276,12 @@ export default function HomePage() {
                             type="text"
                             placeholder="🔍 Tìm bài học..."
                             value={search}
-                            onChange={e => setSearch(e.target.value)}
+                            onChange={e => handleSearchChange(e.target.value)}
                             className="bg-slate-900 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 w-48"
                         />
                         <select
                             value={filterLevel}
-                            onChange={e => setFilterLevel(e.target.value)}
+                            onChange={e => handleLevelChange(e.target.value)}
                             className="bg-slate-900 border border-slate-700 text-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                         >
                             <option value="">Tất cả cấp độ</option>
@@ -270,48 +309,87 @@ export default function HomePage() {
                 {/* Video Grid */}
                 {!loading && (
                     <>
-                        {filtered.length === 0 ? (
+                        {videos.length === 0 ? (
                             <div className="text-center py-16">
                                 <div className="text-5xl mb-4">🔍</div>
                                 <p className="text-slate-400">Không tìm thấy bài học nào phù hợp</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                {filtered.map((v) => (
-                                    <div
-                                        key={v._id}
-                                        className="group bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30"
-                                    >
-                                        {/* Level badge */}
-                                        <div className="flex items-center justify-between mb-4">
-                                            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${levelColors[v.level] || levelColors.Intermediate}`}>
-                                                {v.level}
-                                            </span>
-                                            <span className="text-slate-600 text-xs">{v.viewCount} views</span>
-                                        </div>
-
-                                        {/* Title */}
-                                        <h3 className="font-bold text-white text-lg mb-2 line-clamp-2 min-h-[3.5rem]">
-                                            {v.title}
-                                        </h3>
-
-                                        {/* Description */}
-                                        {v.description && (
-                                            <p className="text-slate-500 text-sm mb-4 line-clamp-2">
-                                                {v.description}
-                                            </p>
-                                        )}
-
-                                        {/* CTA Button */}
-                                        <Link
-                                            href={`/watch/${v._id}`}
-                                            className="block w-full text-center bg-white/5 hover:bg-blue-500 border border-white/10 hover:border-blue-500 text-slate-300 hover:text-white font-bold py-3 rounded-2xl transition-all duration-200"
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                    {videos.map((v) => (
+                                        <div
+                                            key={v._id}
+                                            className="group bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30"
                                         >
-                                            Học ngay 🎧
-                                        </Link>
+                                            {/* Level badge */}
+                                            <div className="flex items-center justify-between mb-4">
+                                                <span className={`text-xs font-bold px-3 py-1 rounded-full border ${levelColors[v.level] || levelColors.Intermediate}`}>
+                                                    {v.level}
+                                                </span>
+                                                <span className="text-slate-600 text-xs">{v.viewCount || 0} views</span>
+                                            </div>
+
+                                            {/* Title */}
+                                            <h3 className="font-bold text-white text-lg mb-2 line-clamp-2 min-h-[3.5rem]">
+                                                {v.title}
+                                            </h3>
+
+                                            {/* Description */}
+                                            {v.description && (
+                                                <p className="text-slate-500 text-sm mb-4 line-clamp-2">
+                                                    {v.description}
+                                                </p>
+                                            )}
+
+                                            {/* CTA Button */}
+                                            <Link
+                                                href={`/watch/${v._id}`}
+                                                className="block w-full text-center bg-white/5 hover:bg-blue-500 border border-white/10 hover:border-blue-500 text-slate-300 hover:text-white font-bold py-3 rounded-2xl transition-all duration-200"
+                                            >
+                                                Học ngay 🎧
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Pagination Controls */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 mt-12">
+                                        <button
+                                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                                            disabled={page === 1}
+                                            className="px-4 py-2 border border-slate-800 rounded-xl bg-slate-900 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all text-sm font-semibold"
+                                        >
+                                            ← Trước
+                                        </button>
+                                        {getPageNumbers().map((p, idx) => (
+                                            p === '...' ? (
+                                                <span key={`dots-${idx}`} className="px-2 text-slate-600 font-bold">...</span>
+                                            ) : (
+                                                <button
+                                                    key={`page-${p}`}
+                                                    onClick={() => setPage(p as number)}
+                                                    className={`w-10 h-10 rounded-xl font-bold transition-all text-sm ${
+                                                        page === p
+                                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                                            : 'border border-slate-800 bg-slate-900 text-slate-400 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {p}
+                                                </button>
+                                            )
+                                        ))}
+                                        <button
+                                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={page === totalPages}
+                                            className="px-4 py-2 border border-slate-800 rounded-xl bg-slate-900 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all text-sm font-semibold"
+                                        >
+                                            Sau →
+                                        </button>
                                     </div>
-                                ))}
-                            </div>
+                                )}
+                            </>
                         )}
                     </>
                 )}
