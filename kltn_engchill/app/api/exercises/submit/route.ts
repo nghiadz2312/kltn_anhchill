@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 import dbConnect from "@/lib/dbConnect";
 import Question from "@/models/Question";
 import UserProgress from "@/models/UserProgress";
@@ -9,7 +11,7 @@ export async function POST(req: Request) {
     try {
         await dbConnect();
 
-        const { videoId, userId, answers } = await req.json();
+        const { videoId, answers } = await req.json();
         // answers = [{ questionId: "...", userAnswer: "..." }, ...]
 
         if (!videoId || !answers?.length) {
@@ -49,7 +51,22 @@ export async function POST(req: Request) {
         const totalQuestions = answers.length;
         const score = Math.round((correctCount / totalQuestions) * 100);
 
-        // ── LƯU KẾT QUẢ VÀO DB (nếu có userId) ──
+        // ── LƯU KẾT QUẢ VÀO DB (Xác thực qua Cookie, không tin tưởng body) ──
+        let userId: string | null = null;
+        try {
+            const cookieStore = await cookies();
+            const token = cookieStore.get("engchill-token")?.value;
+            if (token) {
+                const JWT_SECRET = new TextEncoder().encode(
+                    process.env.JWT_SECRET || "engchill-secret-key-change-in-production"
+                );
+                const { payload } = await jwtVerify(token, JWT_SECRET);
+                userId = payload.userId as string;
+            }
+        } catch (jwtError: any) {
+            console.log("Chạy ở chế độ khách (không lưu tiến trình):", jwtError.message);
+        }
+
         if (userId) {
             await UserProgress.create({
                 userId,

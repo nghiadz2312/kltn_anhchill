@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import Question from "@/models/Question";
@@ -19,6 +21,31 @@ import { generateExercises } from "@/lib/groq";
 export async function POST(req: Request) {
     try {
         await dbConnect();
+
+        // Xác thực người dùng qua Cookie trước khi cho phép gọi Groq AI sinh câu hỏi mới
+        const cookieStore = await cookies();
+        const token = cookieStore.get("engchill-token")?.value;
+
+        if (!token) {
+            return NextResponse.json(
+                { error: "Vui lòng đăng nhập để sinh câu hỏi học tập" },
+                { status: 401 }
+            );
+        }
+
+        const JWT_SECRET = new TextEncoder().encode(
+            process.env.JWT_SECRET || "engchill-secret-key-change-in-production"
+        );
+        
+        try {
+            await jwtVerify(token, JWT_SECRET);
+        } catch (jwtError) {
+            return NextResponse.json(
+                { error: "Phiên đăng nhập hết hạn, vui lòng đăng nhập lại" },
+                { status: 401 }
+            );
+        }
+
         const { videoId, count = 6, forceRegenerate = false } = await req.json();
 
         if (!videoId) return NextResponse.json({ error: "Thiếu videoId" }, { status: 400 });

@@ -13,8 +13,7 @@ export default function Footer() {
                 {/* Thương hiệu & Bản quyền */}
                 <div className="text-center md:text-left space-y-1.5">
                     <h3 className="text-lg font-black text-white flex items-center gap-1.5 justify-center md:justify-start">
-                        Eng<span className="text-blue-400">Chill</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                        <span className="text-blue-400">EngChill</span>
                     </h3>
                     <p className="text-xs text-slate-400">
                         © 2025 - 2026 EngChill. All rights reserved.
@@ -65,7 +64,7 @@ export default function Footer() {
                     onClick={() => setIsModalOpen(false)}
                 >
                     <div
-                        className="relative w-full max-w-sm bg-slate-900/90 border border-white/10 rounded-3xl p-6 shadow-2xl text-center space-y-5 animate-scale-up backdrop-blur-xl"
+                        className="relative w-full max-w-lg bg-slate-900/90 border border-white/10 rounded-3xl p-6 shadow-2xl text-center space-y-5 animate-scale-up backdrop-blur-xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Nút đóng */}
@@ -93,7 +92,7 @@ export default function Footer() {
                             <img
                                 src="/donate-qr.png"
                                 alt="QR Code Donate"
-                                className="w-56 h-auto mx-auto rounded-lg"
+                                className="w-full h-auto mx-auto rounded-lg"
                                 onError={(e) => {
                                     // Fallback if image isn't copied yet
                                     e.currentTarget.src = "https://placehold.co/200x260?text=Donate+QR";
