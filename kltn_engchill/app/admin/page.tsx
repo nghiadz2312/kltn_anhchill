@@ -14,11 +14,21 @@ interface Video {
 }
 
 export default function AdminPage() {
-    const [tab, setTab] = useState<'upload' | 'manage' | 'collections' | 'stats'>('upload');
+    const [tab, setTab] = useState<'upload' | 'manage' | 'collections' | 'stats' | 'users'>('upload');
 
     const [stats, setStats] = useState<any>(null);
     const [loadingStats, setLoadingStats] = useState(false);
     const [userSearch, setUserSearch] = useState('');
+
+    // ── USERS TAB STATE ──
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [userTabSearch, setUserTabSearch] = useState('');
+    const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+    const [deletingUsers, setDeletingUsers] = useState(false);
+    const [emailPattern, setEmailPattern] = useState('');
+    const [namePattern, setNamePattern] = useState('');
+    const [userTotal, setUserTotal] = useState(0);
 
     // ── UPLOAD STATE ──
     const [file, setFile] = useState<File | null>(null);
@@ -62,6 +72,7 @@ export default function AdminPage() {
         if (tab === 'manage') fetchVideos();
         if (tab === 'collections') fetchCollections();
         if (tab === 'stats') fetchStats();
+        if (tab === 'users') fetchUsers();
     }, [tab]);
 
     /**
@@ -89,6 +100,91 @@ export default function AdminPage() {
             }
         } finally {
             setLoadingStats(false);
+        }
+    };
+
+    const fetchUsers = async (search = userTabSearch) => {
+        setLoadingUsers(true);
+        try {
+            const params = new URLSearchParams({ limit: '200' });
+            if (search) params.set('search', search);
+            const res = await fetch(`/api/admin/users?${params}`);
+            if (res.ok) {
+                const data = await res.json();
+                setAllUsers(data.users || []);
+                setUserTotal(data.total || 0);
+                setSelectedUserIds(new Set());
+            }
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
+
+    const handleBulkDeleteSelected = async () => {
+        if (selectedUserIds.size === 0) return;
+        if (!confirm(`Xóa vĩnh viễn ${selectedUserIds.size} tài khoản đã chọn? Không thể hoàn tác!`)) return;
+        setDeletingUsers(true);
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: Array.from(selectedUserIds) }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success(`✅ Đã xóa ${data.deleted} tài khoản!`);
+                fetchUsers();
+            } else {
+                toast.error(data.error || 'Xóa thất bại');
+            }
+        } finally {
+            setDeletingUsers(false);
+        }
+    };
+
+    const handleBulkDeletePattern = async (type: 'email' | 'name', pattern: string) => {
+        if (!pattern.trim()) return toast.warn('Vui lòng nhập pattern');
+        if (!confirm(`Xóa TẤT CẢ tài khoản có ${type} khớp với "${pattern}"?\nThao tác không thể hoàn tác!`)) return;
+        setDeletingUsers(true);
+        try {
+            const body = type === 'email' ? { emailPattern: pattern } : { namePattern: pattern };
+            const res = await fetch('/api/admin/users', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success(`✅ Đã xóa ${data.deleted} tài khoản!`);
+                if (type === 'email') setEmailPattern('');
+                else setNamePattern('');
+                fetchUsers();
+            } else {
+                toast.error(data.error || 'Xóa thất bại');
+            }
+        } finally {
+            setDeletingUsers(false);
+        }
+    };
+
+    const toggleUserSelect = (id: string) => {
+        setSelectedUserIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        const visible = allUsers.filter(u =>
+            !userTabSearch ||
+            u.name?.toLowerCase().includes(userTabSearch.toLowerCase()) ||
+            u.email?.toLowerCase().includes(userTabSearch.toLowerCase())
+        );
+        if (visible.every(u => selectedUserIds.has(u._id))) {
+            setSelectedUserIds(new Set());
+        } else {
+            setSelectedUserIds(new Set(visible.map(u => u._id)));
         }
     };
 
@@ -367,6 +463,7 @@ export default function AdminPage() {
                         { key: 'upload', label: '📤 Upload bài mới' },
                         { key: 'manage', label: `📋 Bài học (${videos.length})` },
                         { key: 'collections', label: '📚 Bộ sưu tập' },
+                        { key: 'users', label: '👥 Users' },
                         { key: 'stats', label: '📊 Thống kê' },
                     ].map(t => (
                         <button
@@ -705,6 +802,157 @@ export default function AdminPage() {
                                         </button>
                                     </div>
                                 ))
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── TAB USERS ─── */}
+                {tab === 'users' && (
+                    <div className="space-y-5">
+                        {/* Xóa theo pattern */}
+                        <div className="bg-slate-900 border border-red-900/40 rounded-3xl p-6">
+                            <h2 className="text-red-400 font-bold text-lg mb-1 flex items-center gap-2">🧹 Xóa hàng loạt theo pattern</h2>
+                            <p className="text-slate-500 text-sm mb-4">Dùng regex để xóa tất cả tài khoản khớp. Ví dụ: <code className="bg-slate-800 px-1.5 py-0.5 rounded text-amber-400">hacker</code> sẽ xóa mọi user có tên/email chứa từ đó.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-slate-400 text-xs font-bold uppercase tracking-wider">Xóa theo Email chứa...</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="VD: hacker, @999.com, @222.com"
+                                            value={emailPattern}
+                                            onChange={e => setEmailPattern(e.target.value)}
+                                            className="flex-1 bg-slate-800 border border-slate-700 text-white placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-red-500 transition-colors"
+                                        />
+                                        <button
+                                            onClick={() => handleBulkDeletePattern('email', emailPattern)}
+                                            disabled={deletingUsers || !emailPattern.trim()}
+                                            className="bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 text-red-400 font-bold px-4 py-2.5 rounded-xl transition-all text-sm disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                                        >
+                                            {deletingUsers ? '⏳' : '🗑️ Xóa'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-slate-400 text-xs font-bold uppercase tracking-wider">Xóa theo Tên chứa...</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="VD: hacker, bot, spam"
+                                            value={namePattern}
+                                            onChange={e => setNamePattern(e.target.value)}
+                                            className="flex-1 bg-slate-800 border border-slate-700 text-white placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-red-500 transition-colors"
+                                        />
+                                        <button
+                                            onClick={() => handleBulkDeletePattern('name', namePattern)}
+                                            disabled={deletingUsers || !namePattern.trim()}
+                                            className="bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 text-red-400 font-bold px-4 py-2.5 rounded-xl transition-all text-sm disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                                        >
+                                            {deletingUsers ? '⏳' : '🗑️ Xóa'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Danh sách users */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+                            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                                <h2 className="text-white font-bold text-lg">👤 Danh sách tài khoản <span className="text-slate-500 font-normal text-sm">({userTotal} tổng)</span></h2>
+                                <div className="flex items-center gap-2">
+                                    {selectedUserIds.size > 0 && (
+                                        <button
+                                            onClick={handleBulkDeleteSelected}
+                                            disabled={deletingUsers}
+                                            className="bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-50"
+                                        >
+                                            {deletingUsers ? '⏳ Đang xóa...' : `🗑️ Xóa ${selectedUserIds.size} tài khoản đã chọn`}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => fetchUsers(userTabSearch)}
+                                        disabled={loadingUsers}
+                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-sm transition-all"
+                                    >
+                                        {loadingUsers ? '⏳' : '🔄 Tải lại'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Search */}
+                            <input
+                                type="text"
+                                placeholder="Tìm theo tên hoặc email..."
+                                value={userTabSearch}
+                                onChange={e => {
+                                    setUserTabSearch(e.target.value);
+                                    fetchUsers(e.target.value);
+                                }}
+                                className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 mb-4 transition-colors"
+                            />
+
+                            {loadingUsers ? (
+                                <div className="text-center py-16">
+                                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                    <p className="text-slate-500 text-sm">Đang tải danh sách...</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-slate-800">
+                                                <th className="pb-3 pr-3 text-left">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded"
+                                                        checked={allUsers.length > 0 && allUsers.every(u => selectedUserIds.has(u._id))}
+                                                        onChange={toggleSelectAll}
+                                                    />
+                                                </th>
+                                                <th className="text-left text-slate-500 font-semibold pb-3 pr-4">#</th>
+                                                <th className="text-left text-slate-500 font-semibold pb-3 pr-4">Tên</th>
+                                                <th className="text-left text-slate-500 font-semibold pb-3 pr-4">Email</th>
+                                                <th className="text-left text-slate-500 font-semibold pb-3">Ngày tham gia</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800/50">
+                                            {allUsers.map((u: any, idx: number) => (
+                                                <tr
+                                                    key={u._id}
+                                                    className={`hover:bg-slate-800/40 transition-colors cursor-pointer ${selectedUserIds.has(u._id) ? 'bg-red-500/10' : ''}`}
+                                                    onClick={() => toggleUserSelect(u._id)}
+                                                >
+                                                    <td className="py-3 pr-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={selectedUserIds.has(u._id)}
+                                                            onChange={() => toggleUserSelect(u._id)}
+                                                            onClick={e => e.stopPropagation()}
+                                                        />
+                                                    </td>
+                                                    <td className="py-3 pr-4 text-slate-600 font-mono">{idx + 1}</td>
+                                                    <td className="py-3 pr-4">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                                                {u.name?.[0]?.toUpperCase() || '?'}
+                                                            </div>
+                                                            <span className="text-white font-medium">{u.name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 pr-4 text-slate-400">{u.email}</td>
+                                                    <td className="py-3 text-slate-500">
+                                                        {new Date(u.createdAt).toLocaleDateString('vi-VN')}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {allUsers.length === 0 && (
+                                        <p className="text-center text-slate-500 py-12">Không có tài khoản nào.</p>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>

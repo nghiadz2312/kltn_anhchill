@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
+import OtpToken from "@/models/OtpToken";
+import { sendOtpEmail } from "@/lib/sendOtpEmail";
 
-// Đăng ký tài khoản — validate, kiểm tra email trùng, tạo user (bcrypt hash qua pre-save hook)
+/**
+ * POST /api/auth/register
+ *
+ * Luồng mới (có xác thực email):
+ * 1. Validate input
+ * 2. Kiểm tra email đã tồn tại chưa
+ * 3. Hash password sẵn (tránh hash lại 2 lần ở bước verify)
+ * 4. Sinh OTP 6 số ngẫu nhiên, hash OTP rồi lưu vào OtpToken
+ * 5. Gửi email chứa OTP qua Resend
+ * 6. Trả về success — CHƯA tạo User, chờ verify OTP
+ */
 export async function POST(req: Request) {
     try {
         await dbConnect();
@@ -12,7 +25,7 @@ export async function POST(req: Request) {
         if (!name || !email || !password) {
             return NextResponse.json(
                 { error: "Vui lòng điền đầy đủ thông tin" },
-                { status: 400 } // 400 = Bad Request
+                { status: 400 }
             );
         }
 
@@ -23,7 +36,6 @@ export async function POST(req: Request) {
             );
         }
 
-        // Validate email format bằng regex đơn giản
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return NextResponse.json(
@@ -32,29 +44,40 @@ export async function POST(req: Request) {
             );
         }
 
-        // Check trước để trả lỗi thân thiện, tránh lỗi duplicate key 11000 từ MongoDB
+        // Kiểm tra email đã được sử dụng bởi tài khoản đã xác thực
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return NextResponse.json(
                 { error: "Email này đã được sử dụng" },
-                { status: 409 } // 409 = Conflict
+                { status: 409 }
             );
         }
 
-        // User.create() tự kích hoạt pre-save hook → bcrypt hash password trước khi lưu
-        const newUser = await User.create({ name, email, password });
-        return NextResponse.json(
-            {
-                success: true,
-                message: "Tạo tài khoản thành công!",
-                user: {
-                    id: newUser._id,
-                    name: newUser.name,
-                    email: newUser.email,
-                    role: newUser.role,
-                },
+        // Hash password trước — khi verify OTP xong sẽ tạo user với hashedPassword này
+        // (tránh lưu plaintext password vào DB dù chỉ tạm thời)
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Sinh OTP 6 chữ số ngẫu nhiên dạng chuỗi (có padding 0 nếu < 100000)
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        const otpHash = await bcrypt.hash(otp, 10); // salt=10 đủ nhanh cho OTP ngắn hạn
+
+        // Lưu OtpToken — pre-save hook sẽ xóa token cũ cùng email trước khi tạo mới
+        await OtpToken.create({
+            email: email.toLowerCase(),
+            otpHash,
+            userData: {
+                name: name.trim(),
+                email: email.toLowerCase(),
+                hashedPassword,
             },
-            { status: 201 } // 201 = Created
+        });
+
+        // Gửi email (nếu RESEND_API_KEY chưa set thì tự log ra console)
+        await sendOtpEmail(email, name, otp);
+
+        return NextResponse.json(
+            { success: true, message: "Đã gửi mã xác thực về email của bạn!" },
+            { status: 200 }
         );
     } catch (error: any) {
         console.error("Lỗi đăng ký:", error);
