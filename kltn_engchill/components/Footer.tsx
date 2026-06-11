@@ -13,7 +13,11 @@ export default function Footer() {
                 {/* Thương hiệu & Bản quyền */}
                 <div className="text-center md:text-left space-y-1.5">
                     <h3 className="text-lg font-black text-white flex items-center gap-1.5 justify-center md:justify-start">
-                        <span className="text-blue-400">EngChill</span>
+                        <a href="/">
+                            <span className="text-blue-400 cursor-pointer">
+                                EngChill
+                            </span>
+                        </a>
                     </h3>
                     <p className="text-xs text-slate-400">
                         © 2025 - 2026 EngChill. All rights reserved.
