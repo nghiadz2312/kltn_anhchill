@@ -102,7 +102,7 @@ export default function Footer() {
                         </div>
 
                         <div className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
-                            Ngân hàng Quân đội (MBBank) · Nguyen Giang Tuan Nghia
+                            (MBBank) · Nguyen Giang Tuan Nghia
                         </div>
                     </div>
                 </div>
