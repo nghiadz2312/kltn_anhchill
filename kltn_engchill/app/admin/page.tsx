@@ -52,6 +52,11 @@ export default function AdminPage() {
     const [savingTranscript, setSavingTranscript] = useState(false);
     const [loadingTranscript, setLoadingTranscript] = useState(false);
 
+    // ── EDIT TITLE STATE ──
+    const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+    const [editingTitleValue, setEditingTitleValue] = useState('');
+    const [savingTitle, setSavingTitle] = useState(false);
+
     // ── COLLECTIONS STATE ──
     const [collections, setCollections] = useState<any[]>([]);
     const [loadingCols, setLoadingCols] = useState(false);
@@ -417,6 +422,30 @@ export default function AdminPage() {
         }
     };
 
+    const handleSaveTitle = async (id: string) => {
+        const newTitle = editingTitleValue.trim();
+        if (!newTitle) return;
+        setSavingTitle(true);
+        try {
+            const res = await fetch(`/api/admin/videos/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: newTitle }),
+            });
+            if (res.ok) {
+                toast.success('Đã cập nhật tên bài học!');
+                setVideos(prev => prev.map(v => v._id === id ? { ...v, title: newTitle } : v));
+                setEditingTitleId(null);
+            } else {
+                toast.error('Cập nhật tên thất bại');
+            }
+        } catch {
+            toast.error('Lỗi kết nối server');
+        } finally {
+            setSavingTitle(false);
+        }
+    };
+
     const handleSaveTranscript = async () => {
         if (!editingVideo) return;
         setSavingTranscript(true);
@@ -641,7 +670,44 @@ export default function AdminPage() {
                                                 <span className="text-xs text-amber-400">⚠️ Chưa có transcript</span>
                                             )}
                                         </div>
-                                        <p className="text-white font-bold truncate">{v.title}</p>
+                                        {editingTitleId === v._id ? (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    autoFocus
+                                                    value={editingTitleValue}
+                                                    onChange={e => setEditingTitleValue(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') handleSaveTitle(v._id);
+                                                        if (e.key === 'Escape') setEditingTitleId(null);
+                                                    }}
+                                                    className="flex-1 bg-slate-800 border border-blue-500 text-white rounded-xl px-3 py-1.5 text-sm focus:outline-none"
+                                                />
+                                                <button
+                                                    onClick={() => handleSaveTitle(v._id)}
+                                                    disabled={savingTitle}
+                                                    className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold disabled:opacity-50"
+                                                >
+                                                    {savingTitle ? '⏳' : 'Lưu'}
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditingTitleId(null)}
+                                                    className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg font-bold"
+                                                >
+                                                    Hủy
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group/title">
+                                                <p className="text-white font-bold truncate">{v.title}</p>
+                                                <button
+                                                    onClick={() => { setEditingTitleId(v._id); setEditingTitleValue(v.title); }}
+                                                    title="Sửa tên bài học"
+                                                    className="opacity-0 group-hover/title:opacity-100 text-slate-500 hover:text-white transition-all text-xs px-1.5 py-0.5 rounded-md hover:bg-slate-700"
+                                                >
+                                                    ✎
+                                                </button>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="text-slate-500 text-[10px] uppercase font-bold">Chủ đề:</span>
                                             <select
