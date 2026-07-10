@@ -23,6 +23,7 @@ export interface TranscribeResult {
  *
  * @param audioBuffer - Buffer của file audio (mp3, wav, m4a...)
  * @param fileName - Tên file để Groq nhận dạng định dạng (vd: "audio.mp3")
+ * // Trigger deploy: Reverted back to commit 83f9ff9
  */
 export async function transcribeVideo(
     audioBuffer: Buffer,
