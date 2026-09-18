@@ -1,0 +1,17 @@
+[33mcommit 83f9ff9eb0bb6e698ffd646c2319972f94ed70d0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Nghia Nguyen <nghia23122004@gmail.com>
+Date:   Sat Jun 13 00:32:27 2026 +0700
+
+    change name for lession
+
+[33mcommit 1578199b5e6b791b0345765701aa57b88e0d3909[m
+Author: Nghia Nguyen <nghia23122004@gmail.com>
+Date:   Fri Jun 12 10:05:30 2026 +0700
+
+    trigger vercel deploy
+
+[33mcommit 4c13de2537ebb8af1aec2addda31f08495d3ead6[m
+Author: Nghia Nguyen <nghia23122004@gmail.com>
+Date:   Fri Jun 12 02:07:22 2026 +0700
+
+    update UX- UI
