@@ -3,7 +3,7 @@ import Groq from "groq-sdk";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Groq LLM — sinh câu hỏi trắc nghiệm và điền từ từ transcript
-// Model llama-3.3-70b-versatile, response_format json để parse an toàn
+// Model openai/gpt-oss-120b, response_format json để parse an toàn
 
 export interface MultipleChoiceQuestion {
     type: "multiple_choice";
@@ -71,10 +71,10 @@ Generate exactly ${count} questions. Return this JSON format:
 }`;
 
     const response = await groq.chat.completions.create({
-        model: "llama-3.1-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [
             { role: "system", content: systemPrompt },
-            { role: "user",   content: userPrompt },
+            { role: "user", content: userPrompt },
         ],
         temperature: 0.7,
         max_tokens: 2000,
