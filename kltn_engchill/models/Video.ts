@@ -41,6 +41,11 @@ const videoSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        // Ngôn ngữ Whisper tự detect (vd: "en", "vi", "ja", "ko")
+        language: {
+            type: String,
+            default: "en",
+        },
         // Transcript có timestamp — dùng cho tính năng highlight
         segments: {
             type: [segmentSchema],

@@ -58,12 +58,12 @@ export async function POST(req: Request) {
             }
         }
 
-        // 📘 BƯỚC 2: Lấy transcript
-        const video = await Video.findById(videoId).select("title script");
+        // 📘 BƯỚC 2: Lấy transcript + ngôn ngữ
+        const video = await Video.findById(videoId).select("title script language");
         if (!video || !video.script) return NextResponse.json({ error: "Thiếu transcript" }, { status: 400 });
 
-        // 📘 BƯỚC 3: Gọi AI sinh câu hỏi
-        const { questions } = await generateExercises(video.script, video.title, count);
+        // 📘 BƯỚC 3: Gọi AI sinh câu hỏi (theo ngôn ngữ bài hát)
+        const { questions } = await generateExercises(video.script, video.title, count, video.language || "en");
         if (!questions.length) return NextResponse.json({ error: "AI lỗi" }, { status: 500 });
 
         // 📘 BƯỚC 4: LƯU MỚI (KHÔNG XÓA CŨ)

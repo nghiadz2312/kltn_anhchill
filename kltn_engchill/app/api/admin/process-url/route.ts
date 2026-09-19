@@ -32,9 +32,9 @@ export async function POST(req: Request) {
         console.log(`🤖 Gửi audio lên Groq Whisper AI...`);
 
         // Transcribe với Groq AI
-        const { fullText, segments } = await transcribeVideo(buffer, audioFileName);
+        const { fullText, segments, language } = await transcribeVideo(buffer, audioFileName);
 
-        console.log(`✅ Transcribe xong! ${segments.length} segments`);
+        console.log(`✅ Transcribe xong! ${segments.length} segments — Ngôn ngữ: ${language}`);
 
         // Lưu vào MongoDB
         const newVideo = await Video.create({
@@ -43,6 +43,7 @@ export async function POST(req: Request) {
             videoUrl: cloudinaryUrl,
             script: fullText,
             segments,
+            language,
             level: level || "Intermediate",
             collections: collectionId ? [collectionId] : [],
             createdAt: new Date(),

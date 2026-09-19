@@ -31,26 +31,37 @@ export interface GeneratedExercise {
 export async function generateExercises(
     transcript: string,
     videoTitle: string,
-    count: number = 5
+    count: number = 5,
+    language: string = "en"
 ): Promise<GeneratedExercise> {
 
-    const systemPrompt = `You are an expert English language teacher creating exercises for Vietnamese students.
-Your task: Generate exercises from the given audio transcript.
+    // Map mã ngôn ngữ → tên ngôn ngữ đầy đủ để prompt rõ ràng hơn
+    const languageNames: Record<string, string> = {
+        en: "English", vi: "Vietnamese", ja: "Japanese", ko: "Korean",
+        zh: "Chinese", fr: "French", es: "Spanish", de: "German",
+        th: "Thai", pt: "Portuguese", ru: "Russian", ar: "Arabic",
+        it: "Italian", nl: "Dutch", sv: "Swedish", pl: "Polish",
+    };
+    const langName = languageNames[language] || language;
+
+    const systemPrompt = `You are an expert language teacher creating exercises for students learning ${langName}.
+Your task: Generate exercises from the given audio transcript which is in ${langName}.
 Rules:
 - Create a mix of multiple_choice and fill_blank questions
 - Questions must be DIRECTLY based on the transcript content
+- ALL questions, options, explanations, sentences, and hints MUST be in ${langName} (the same language as the transcript)
 - For fill_blank: blank out important vocabulary words (nouns, verbs, adjectives)
 - For multiple_choice: test comprehension, vocabulary, or grammar
-- Keep questions clear and at intermediate English level
+- Keep questions clear and at intermediate level
 - ALWAYS respond with valid JSON only, no extra text`;
 
     const userPrompt = `
-Transcript from lesson "${videoTitle}":
+Transcript from lesson "${videoTitle}" (Language: ${langName}):
 """
 ${transcript.slice(0, 3000)} 
 """
 
-Generate exactly ${count} questions. Return this JSON format:
+Generate exactly ${count} questions in ${langName}. Return this JSON format:
 {
   "questions": [
     {
@@ -74,7 +85,7 @@ Generate exactly ${count} questions. Return this JSON format:
         model: "openai/gpt-oss-120b",
         messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
+            { role: "user",   content: userPrompt },
         ],
         temperature: 0.7,
         max_tokens: 2000,

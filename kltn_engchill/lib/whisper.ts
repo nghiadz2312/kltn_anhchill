@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Gọi Groq Whisper API để transcribe audio → trả về fullText + segments[] kèm timestamp
+// Gọi Groq Whisper API để transcribe audio → trả về fullText + segments[] kèm timestamp + language detected
 // verbose_json để lấy timestamp từng câu (dùng cho tính năng highlight transcript khi nghe)
 
 export interface Segment {
@@ -15,6 +15,7 @@ export interface Segment {
 export interface TranscribeResult {
     fullText: string;     // toàn bộ transcript (để lưu tìm kiếm)
     segments: Segment[];  // từng câu kèm timestamp
+    language: string;     // ngôn ngữ Whisper tự detect (vd: "en", "vi", "ja", "ko")
 }
 
 /**
@@ -44,8 +45,11 @@ export async function transcribeVideo(
             file: audioFile,
             model: "whisper-large-v3",
             response_format: "verbose_json", // lấy timestamps
-            language: "en",
+            // Không hardcode language → Whisper tự detect ngôn ngữ bài hát
         });
+
+        const detectedLanguage = (transcription as any).language || "en";
+        console.log(`🌐 Ngôn ngữ phát hiện: ${detectedLanguage}`);
 
         console.log("✅ Whisper AI xử lý xong!");
 
@@ -61,12 +65,14 @@ export async function transcribeVideo(
         return {
             fullText: transcription.text,
             segments,
+            language: detectedLanguage,
         };
     } catch (error) {
         console.error("Lỗi Whisper AI:", error);
         return {
             fullText: "Không thể nhận diện âm thanh.",
             segments: [],
+            language: "en",
         };
     }
 }

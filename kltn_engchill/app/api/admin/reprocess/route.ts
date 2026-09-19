@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
         // ── BƯỚC 3: Gọi Whisper AI với BUFFER ──
         console.log(`🤖 Gửi buffer tới Whisper AI...`);
-        const { fullText, segments } = await transcribeVideo(buffer, path.basename(video.videoUrl));
+        const { fullText, segments, language } = await transcribeVideo(buffer, path.basename(video.videoUrl));
 
         if (!fullText || fullText.length < 10) {
             return NextResponse.json(
@@ -67,10 +67,13 @@ export async function POST(req: Request) {
             );
         }
 
-        // ── BƯỚC 4: Cập nhật DB ──
+        console.log(`🌐 Ngôn ngữ phát hiện: ${language}`);
+
+        // ── BƯỚC 4: Cập nhật DB (bao gồm language detected) ──
         await Video.findByIdAndUpdate(videoId, {
             script: fullText,
             segments: segments,
+            language: language,
         });
 
         return NextResponse.json({
