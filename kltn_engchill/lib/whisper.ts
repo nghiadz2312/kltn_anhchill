@@ -41,23 +41,55 @@ export async function transcribeVideo(
             type: getAudioMimeType(fileName),
         });
 
-
-        const transcription = await groq.audio.transcriptions.create({
+        // Không truyền language → để Whisper tự detect (tránh "language override unsupported")
+        // Không truyền prompt tiếng Anh → tránh kéo lệch khi nhạc Việt/Nhật/Hàn
+        const baseParams = {
             file: audioFile,
-            model: "whisper-large-v3",
-            response_format: "verbose_json", // lấy timestamps
-            // Prompt trung tính, không tiếng Anh → không kéo lệch auto-detect
-            prompt: "Bài hát. Lời nhạc. Song lyrics.",
-            // Chỉ truyền language nếu caller cung cấp, còn lại để Whisper tự detect
-            ...(language ? { language } : {}),
-        });
+            model: "whisper-large-v3-turbo" as const,  // turbo hỗ trợ đa ngôn ngữ tốt hơn
+            prompt: "Lời bài hát.",                     // prompt trung tính
+        };
 
-        const detectedLanguage = (transcription as any).language || "en";
-        console.log(`🌐 Ngôn ngữ phát hiện: ${detectedLanguage}`);
+        let transcription: any;
+        let usedFallback = false;
+
+        try {
+            // Thử verbose_json trước để lấy timestamps
+            transcription = await groq.audio.transcriptions.create({
+                ...baseParams,
+                response_format: "verbose_json",
+            });
+        } catch (verboseErr: any) {
+            // Groq ném "language override unsupported" với một số ngôn ngữ khi dùng verbose_json
+            // → Fallback sang json thường (không có segments timestamps)
+            console.warn(`⚠️ verbose_json thất bại (${verboseErr?.message}), fallback sang json...`);
+            usedFallback = true;
+            transcription = await groq.audio.transcriptions.create({
+                ...baseParams,
+                response_format: "json",
+            });
+        }
+
+        const detectedLanguage = (transcription as any).language || "vi";
+        console.log(`🌐 Ngôn ngữ phát hiện: ${detectedLanguage} | fallback mode: ${usedFallback}`);
 
         console.log("✅ Whisper AI xử lý xong!");
 
-        const rawSegments = (transcription as any).segments || [];
+        const fullText: string = transcription.text || "";
+        let rawSegments = (transcription as any).segments || [];
+
+        // Nếu fallback sang json → không có segments, tự split từ fullText
+        if (usedFallback || rawSegments.length === 0) {
+            console.log("📝 Fallback: tự tạo segments từ fullText (không có timestamps)");
+            rawSegments = fullText
+                .split(/(?<=[.!?…])\s+|\n/)  // split theo dấu câu hoặc xuống dòng
+                .filter((s: string) => s.trim().length > 0)
+                .map((text: string, idx: number) => ({
+                    id: idx,
+                    start: 0,   // không có timestamp thực
+                    end: 0,
+                    text: text.trim(),
+                }));
+        }
 
         const segments: Segment[] = rawSegments
             .map((seg: any) => ({
@@ -99,7 +131,7 @@ export async function transcribeVideo(
             .map((seg: Segment, idx: number) => ({ ...seg, id: idx }));
 
         return {
-            fullText: transcription.text,
+            fullText,
             segments,
             language: detectedLanguage,
         };
